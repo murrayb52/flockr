@@ -144,8 +144,14 @@ func (c Client) Prompt(session, prompt, initial, template string) error {
 	if err != nil {
 		return err
 	}
-	_, err = c.run("command-prompt", "-t", client, "-p", prompt, "-I", initial, template)
-	return err
+	// command-prompt only returns once the prompt is answered or dismissed:
+	// start it and move on, the answer arrives through the template.
+	cmd := c.cmd("command-prompt", "-t", client, "-p", prompt, "-I", initial, template)
+	if err := cmd.Start(); err != nil {
+		return err
+	}
+	go cmd.Wait()
+	return nil
 }
 
 // Source reloads a config file into a running server (ignored if none runs).

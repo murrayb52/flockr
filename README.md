@@ -24,7 +24,8 @@ every action is an **i3 binding**, so it works whichever agent has the keyboard.
 
 - **Sidebar** — the focused workspace's windows, grouped the way i3 lays them out (columns, stacks,
   tabs), with app icons, slot numbers, agent state and how long it has been in it. `Super+b` condenses it
-  to an icon rail; the `−` `+` buttons at its foot change its text size.
+  to an icon rail. Its `≡ menu` (click it) holds the text size, condense, a notifications switch and
+  the legend.
 - **Agent state** — working (amber spinner), needs you (red `!`), done but not yet seen (green `✓`) or
   idle (`○`), reported by the agents themselves through Claude Code hooks and a Pi extension.
 - **Notifications** — a desktop notification when an agent needs you or finishes out of sight; its
@@ -78,7 +79,10 @@ no_focus [class="flock-sidebar"]
 font pango:monospace 1                              # slim stack/tab title bars
 ```
 
-Any terminal works: `kitty -e flock term`, `ghostty -e flock term`, … For the bar, see
+Any terminal works: `kitty -e flock term`, `ghostty -e flock term`, … With **gnome-terminal**, give
+the full path (`gnome-terminal -- ~/.local/bin/flock term`): it starts commands from a background
+server with systemd's `PATH`, which usually lacks `~/.local/bin`, so a bare `flock` finds util-linux's.
+For the bar, see
 [`examples/polybar.ini`](examples/polybar.ini). Remove the integrations with
 `flock uninstall claude|pi|all`.
 

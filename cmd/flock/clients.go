@@ -15,7 +15,7 @@ import (
 	"github.com/murrayb52/flock/internal/ui"
 )
 
-func runSidebar(cfg config.Config) error { return sidebar.Run(cfg.Socket) }
+func runSidebar(cfg config.Config, menu bool) error { return sidebar.Run(cfg.Socket, menu) }
 
 func runNotesUI(cfg config.Config, pane string) error { return notesui.Run(cfg.Socket, pane) }
 

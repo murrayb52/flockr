@@ -426,6 +426,42 @@ func TestSidebarFontReopensAtNewSizeKeepingGap(t *testing.T) {
 	}
 }
 
+func TestNotificationsSwitchIsSavedAndMutes(t *testing.T) {
+	d, _, _, n, _ := fixture(t)
+	if r := d.Command([]string{"notifications", "off"}); !r.OK || !d.Snapshot().Muted {
+		t.Fatalf("off: %+v muted=%v", r, d.Snapshot().Muted)
+	}
+	d.HandleEvent(ev("start", "%1", "a"))
+	d.HandleEvent(ev("input", "%1", "a"))
+	if len(n.shown) != 0 {
+		t.Errorf("muted, yet notified: %+v", n.shown)
+	}
+	if d2 := New(d.cfg, d.d); d2.notifyOn {
+		t.Error("the switch must survive a daemon restart")
+	}
+	d.Command([]string{"notifications", "toggle"})
+	if d.Snapshot().Muted {
+		t.Error("toggle turns them back on")
+	}
+	if r := d.Command([]string{"notifications", "loud"}); r.OK {
+		t.Error("bad value must fail")
+	}
+}
+
+func TestFailedKeyCommandsSayWhy(t *testing.T) {
+	d, _, _, n, _ := fixture(t) // firefox has focus
+	if r := d.Command([]string{"label"}); r.OK {
+		t.Fatal("labelling firefox must fail")
+	}
+	if len(n.shown) != 1 || n.shown[0].key != hintKey || !strings.Contains(n.shown[0].body, "flock terminals") {
+		t.Errorf("hint = %+v", n.shown)
+	}
+	d.Command([]string{"jump", "x"}) // not a key binding: no notification
+	if len(n.shown) != 1 {
+		t.Errorf("only key commands notify: %+v", n.shown)
+	}
+}
+
 func TestHandleProtocol(t *testing.T) {
 	d, _, _, _, _ := fixture(t)
 	e := ev("start", "%1", "z")

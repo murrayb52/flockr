@@ -66,6 +66,7 @@ type Daemon struct {
 	placedAt      time.Time // …and when
 	relaunch      bool      // sidebar closed to reopen at a new font size
 	font          float64   // sidebar font size (points)
+	notifyOn      bool      // desktop notifications (menu switch)
 	dirty         chan struct{}
 }
 
@@ -74,7 +75,9 @@ func New(cfg config.Config, deps Deps) *Daemon {
 		deps.Now = time.Now
 	}
 	home, _ := os.UserHomeDir()
+	font, notifyOn := loadSettings(cfg)
 	return &Daemon{
+		font: font, notifyOn: notifyOn,
 		cfg: cfg, d: deps, home: home,
 		store:    sessions.Store{Dir: filepath.Join(cfg.DataDir, "sessions")},
 		hints:    tmux.Hints{Label: cfg.LabelKey, Notes: cfg.NotesKey},
@@ -87,7 +90,6 @@ func New(cfg config.Config, deps Deps) *Daemon {
 		agentCmd: map[string]string{},
 		gap:      -1,
 		dirty:    make(chan struct{}, 1),
-		font:     loadFont(cfg),
 	}
 }
 
@@ -264,7 +266,7 @@ func (d *Daemon) terms() map[string]*model.Term {
 }
 
 func (d *Daemon) build() model.Snapshot {
-	return model.Snapshot{Workspaces: i3tree.Build(d.tree, d.infos, d.terms()), Condensed: d.condensed, Font: d.font}
+	return model.Snapshot{Workspaces: i3tree.Build(d.tree, d.infos, d.terms()), Condensed: d.condensed, Font: d.font, Muted: !d.notifyOn}
 }
 
 func (d *Daemon) rebuild() {
@@ -408,7 +410,7 @@ func (d *Daemon) HandleEvent(ev agents.Event) {
 	if ch.Ended && d.d.Notifier != nil {
 		d.d.Notifier.Close(ev.Pane)
 	}
-	if ch.Notify != model.StatusNone && a != nil && d.cfg.Notifications && d.d.Notifier != nil &&
+	if ch.Notify != model.StatusNone && a != nil && d.notifyOn && d.d.Notifier != nil &&
 		!(ch.Notify == model.StatusInput && d.paneFocused(ev.Pane)) {
 		d.notify(ev.Pane, a, ch.Notify)
 	}

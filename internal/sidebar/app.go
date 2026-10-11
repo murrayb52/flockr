@@ -47,6 +47,10 @@ func tick() tea.Cmd {
 	return tea.Tick(120*time.Millisecond, func(time.Time) tea.Msg { return tickMsg{} })
 }
 
+func (a *app) call(args ...string) {
+	protocol.Call(a.socket, protocol.Request{Op: protocol.OpCommand, Args: args}, time.Second)
+}
+
 func (a *app) Init() tea.Cmd { return tea.Batch(a.connect, tick()) }
 
 func (a *app) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -72,8 +76,18 @@ func (a *app) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if args == nil && l.ConID != 0 {
 				args = []string{"jump", strconv.FormatInt(l.ConID, 10)}
 			}
-			if args != nil {
-				go protocol.Call(a.socket, protocol.Request{Op: protocol.OpCommand, Args: args}, time.Second)
+			switch {
+			case args == nil:
+			case args[0] == ActMenu:
+				a.frame.Menu = !a.frame.Menu
+			case args[0] == ActMenuExpand:
+				a.frame.Menu = true
+				go a.call("sidebar", "expand")
+			default:
+				if args[0] == "sidebar" && len(args) > 1 && args[1] == "condense" {
+					a.frame.Menu = false
+				}
+				go a.call(args...)
 			}
 		}
 	case tea.KeyMsg:
@@ -101,10 +115,10 @@ func (a *app) View() string {
 	return strings.Join(out, "\n")
 }
 
-// Run shows the sidebar until the window closes.
-func Run(socket string) error {
+// Run shows the sidebar until the window closes, optionally with the menu open.
+func Run(socket string, menu bool) error {
 	home, _ := os.UserHomeDir()
-	a := &app{socket: socket, frame: Frame{Home: home}}
+	a := &app{socket: socket, frame: Frame{Home: home, Menu: menu}}
 	_, err := tea.NewProgram(a, tea.WithAltScreen(), tea.WithMouseCellMotion()).Run()
 	return err
 }

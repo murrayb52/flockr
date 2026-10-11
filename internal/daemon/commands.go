@@ -2,6 +2,7 @@ package daemon
 
 import (
 	"fmt"
+	"log"
 	"strconv"
 	"strings"
 
@@ -15,8 +16,26 @@ import (
 
 const notesHeight = 16 // most lines the notes drawer takes
 
-// Command runs one of the commands i3 bindings call (`flock <name> …`).
+// hintKey is the notification that reports why a key binding did nothing.
+const hintKey = "flock-hint"
+
+// Command runs one of the commands i3 bindings call (`flock <name> …`). Key
+// bindings have nowhere to print, so a failure of one is also shown as a
+// desktop notification.
 func (d *Daemon) Command(args []string) protocol.Response {
+	r := d.command(args)
+	if !r.OK && len(args) > 0 && d.d.Notifier != nil {
+		switch args[0] {
+		case "label", "notes", "slot", "next":
+			if err := d.d.Notifier.Notify(hintKey, "flock", r.Error, false); err != nil {
+				log.Printf("notify: %v", err)
+			}
+		}
+	}
+	return r
+}
+
+func (d *Daemon) command(args []string) protocol.Response {
 	if len(args) == 0 {
 		return fail("no command")
 	}
@@ -56,6 +75,15 @@ func (d *Daemon) Command(args []string) protocol.Response {
 			return d.fontCmd(args[2:])
 		}
 		return d.sidebar(sub)
+	case "notifications":
+		v := "toggle"
+		if len(args) > 1 {
+			v = args[1]
+		}
+		if err := d.setNotifications(v); err != nil {
+			return fail(err.Error())
+		}
+		return ok("")
 	case "refresh":
 		d.markDirty()
 		return ok("")

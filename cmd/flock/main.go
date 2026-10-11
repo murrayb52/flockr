@@ -24,6 +24,7 @@ Usage:
 
 Bindings (call these from i3):
   flock sidebar [toggle|condense|expand|show|font +1|-1|SIZE]
+  flock notifications [on|off|toggle]
   flock label                  name the focused terminal or agent
   flock notes                  open/close the focused agent's notes
   flock next                   focus the next agent that needs you
@@ -70,11 +71,11 @@ func run(args []string) error {
 	case "term":
 		return runTerm(cfg, args[1:])
 	case "sidebar":
-		if len(args) == 1 {
-			return runSidebar(cfg)
+		if len(args) == 1 || args[1] == "--menu" {
+			return runSidebar(cfg, len(args) > 1)
 		}
 		return command(cfg, args...)
-	case "label", "notes", "next", "slot", "jump", "refresh":
+	case "label", "notes", "next", "slot", "jump", "refresh", "notifications":
 		return command(cfg, args...)
 	case "event":
 		return runEvent(cfg, args[1:])

@@ -61,6 +61,7 @@ type Frame struct {
 	Tick          int
 	Now           time.Time
 	Home          string
+	Menu          bool // the menu is open
 }
 
 func tile(w model.Window) string {
@@ -89,64 +90,108 @@ func trunc(s string, n int) string {
 	return runewidth.Truncate(s, n, "…")
 }
 
-// Render draws the sidebar for the focused workspace, with the settings
-// footer on its last row (when the height is known) or after a blank line.
+// Render draws the sidebar for the focused workspace, with the menu at the
+// foot of the window (or after a blank line when the height is unknown).
 func Render(snap model.Snapshot, f Frame) []Line {
 	ws, ok := snap.Current()
 	if !ok {
 		return []Line{{Text: stEmpty.Render(" waiting for i3…")}}
 	}
 	railMode := f.Width <= RailColumns || snap.Condensed
-	var body []Line
+	var body, foot []Line
 	if railMode {
 		body = rail(ws, f)
+		foot = []Line{railMenu()}
 	} else {
 		body = expanded(ws, f)
+		foot = menu(snap, f)
 	}
-	foot := footer(snap.Font, railMode)
-	if f.Height <= 1 {
-		return append(append(body, Line{}), foot)
+	if f.Height <= len(foot) {
+		return append(append(body, Line{}), foot...)
 	}
-	if len(body) > f.Height-1 {
-		body = body[:f.Height-1]
+	room := f.Height - len(foot)
+	if len(body) > room {
+		body = body[:room]
 	}
-	for len(body) < f.Height-1 {
+	for len(body) < room {
 		body = append(body, Line{})
 	}
-	return append(body, foot)
+	return append(body, foot...)
 }
 
-// footer is the font size control: − and + buttons around the size.
-func footer(font float64, railMode bool) Line {
-	var l Line
-	col := 0
-	add := func(text string, args ...string) {
-		w := lipgloss.Width(text)
-		if args != nil {
-			l.Buttons = append(l.Buttons, Button{From: col, To: col + w, Args: args})
-			text = stButton.Render(text)
-		}
-		l.Text += text
-		col += w
+// Local actions the sidebar handles itself rather than sending to the daemon.
+const (
+	ActMenu       = ":menu"        // open or close the menu
+	ActMenuExpand = ":menu-expand" // expand the rail and open the menu
+)
+
+// lineBuilder tracks columns so buttons know which cells they cover.
+type lineBuilder struct {
+	Line
+	col int
+}
+
+func (b *lineBuilder) text(s string) *lineBuilder {
+	b.Text += s
+	b.col += lipgloss.Width(s)
+	return b
+}
+
+func (b *lineBuilder) button(label string, args ...string) *lineBuilder {
+	w := lipgloss.Width(label)
+	b.Buttons = append(b.Buttons, Button{From: b.col, To: b.col + w, Args: args})
+	b.Text += stButton.Render(label)
+	b.col += w
+	return b
+}
+
+// pad fills the label column of a menu row.
+func pad(s string, n int) string { return stLegend.Render(fmt.Sprintf(" %-*s", n, s)) }
+
+func rule(width int) Line {
+	return Line{Text: stSlot.Render(" " + strings.Repeat("─", max(1, width-2)))}
+}
+
+// menu is the ≡ button, and when open the settings and the legend above it.
+func menu(snap model.Snapshot, f Frame) []Line {
+	if !f.Menu {
+		var b lineBuilder
+		b.text(" ").button(" ≡ menu ", ActMenu)
+		return []Line{b.Line}
 	}
-	smaller := []string{"sidebar", "font", "-1"}
-	bigger := []string{"sidebar", "font", "+1"}
-	if railMode {
-		add(" ")
-		add("−", smaller...)
-		add(" ")
-		add("+", bigger...)
-		return l
-	}
+	const col = 14
 	size := "–"
-	if font > 0 {
-		size = strconv.FormatFloat(font, 'f', -1, 64)
+	if snap.Font > 0 {
+		size = strconv.FormatFloat(snap.Font, 'f', -1, 64)
 	}
-	add(stLegend.Render(" text "))
-	add(" − ", smaller...)
-	add(stName.Render(fmt.Sprintf(" %s ", size)))
-	add(" + ", bigger...)
-	return l
+	var text, side, notes, close lineBuilder
+	text.text(pad("text size", col)).button(" − ", "sidebar", "font", "-1").
+		text(stName.Render(fmt.Sprintf(" %s ", size))).button(" + ", "sidebar", "font", "+1")
+	side.text(pad("sidebar", col)).button(" condense ", "sidebar", "condense")
+	state := " on "
+	if snap.Muted {
+		state = " off "
+	}
+	notes.text(pad("notifications", col)).button(state, "notifications", "toggle")
+	close.text(" ").button(" ≡ close ", ActMenu)
+	l := func(st model.Status, s string) string { return logo(st, 0) + stLegend.Render(s) }
+	return []Line{
+		rule(f.Width),
+		text.Line, side.Line, notes.Line,
+		rule(f.Width),
+		{Text: " " + l(model.StatusInput, " needs you  ") + l(model.StatusDone, " done")},
+		{Text: " " + l(model.StatusWorking, " working    ") + l(model.StatusIdle, " idle")},
+		rule(f.Width),
+		close.Line,
+	}
+}
+
+// railMenu: the rail is too narrow for the menu, so its button expands the
+// sidebar and opens the menu there.
+func railMenu() Line {
+	var b lineBuilder
+	b.text(" ").button(" ≡ ", ActMenuExpand)
+	return b.Line
 }
 
 func expanded(ws model.Workspace, f Frame) []Line {
@@ -165,8 +210,6 @@ func expanded(ws model.Workspace, f Frame) []Line {
 			out = append(out, row(w, f)...)
 		}
 	}
-	out = append(out, Line{})
-	out = append(out, legend(f)...)
 	return out
 }
 
@@ -226,14 +269,6 @@ func row(w model.Window, f Frame) []Line {
 	line2 := lead + subStyle.Render(sub)
 	line2 += sp(f.Width - lipgloss.Width(line2))
 	return []Line{{Text: line1, ConID: w.ConID}, {Text: line2, ConID: w.ConID}}
-}
-
-func legend(f Frame) []Line {
-	l := func(s model.Status, text string) string { return logo(s, f.Tick) + stLegend.Render(text) }
-	return []Line{
-		{Text: " " + l(model.StatusInput, " needs you  ") + l(model.StatusDone, " done")},
-		{Text: " " + l(model.StatusWorking, " working    ") + l(model.StatusIdle, " idle")},
-	}
 }
 
 func rail(ws model.Workspace, f Frame) []Line {

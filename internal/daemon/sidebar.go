@@ -1,16 +1,11 @@
 package daemon
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"math"
-	"os"
-	"path/filepath"
 	"strings"
 	"time"
-
-	"github.com/murrayb52/flock/internal/config"
 
 	"github.com/murrayb52/flock/internal/i3tree"
 	"go.i3wm.org/i3/v4"
@@ -34,12 +29,18 @@ func (d *Daemon) ensureSidebar() {
 	}
 	d.mu.Unlock()
 	if missing {
-		d.launchSidebar()
+		d.launchSidebar(false)
 	}
 }
 
-func (d *Daemon) launchSidebar() {
-	cmd := d.cfg.TerminalCommand(i3tree.SidebarClass, shellQuote(d.d.Bin)+" sidebar", d.font)
+// launchSidebar opens the sidebar terminal; withMenu reopens it with the menu
+// open (after a font change made from the menu).
+func (d *Daemon) launchSidebar(withMenu bool) {
+	args := " sidebar"
+	if withMenu {
+		args += " --menu"
+	}
+	cmd := d.cfg.TerminalCommand(i3tree.SidebarClass, shellQuote(d.d.Bin)+args, d.font)
 	if err := d.d.Launch(cmd); err != nil {
 		log.Printf("launching sidebar: %v", err)
 	}
@@ -50,22 +51,6 @@ const (
 	minFont = 5.0
 	maxFont = 30.0
 )
-
-// settings are choices made from the sidebar itself, kept apart from the
-// user's config file so flock never rewrites it.
-type settings struct {
-	SidebarFont float64 `json:"sidebar_font_size,omitempty"`
-}
-
-func settingsPath(cfg config.Config) string { return filepath.Join(cfg.DataDir, "settings.json") }
-
-func loadFont(cfg config.Config) float64 {
-	var s settings
-	if b, err := os.ReadFile(settingsPath(cfg)); err == nil && json.Unmarshal(b, &s) == nil && s.SidebarFont > 0 {
-		return s.SidebarFont
-	}
-	return cfg.SidebarFont
-}
 
 // setFont changes the sidebar's font size by step (or to size when step is 0),
 // saves it and reopens the sidebar terminal, the one way that works for every
@@ -81,11 +66,7 @@ func (d *Daemon) setFont(size, step float64) error {
 		return nil
 	}
 	d.font = size
-	if err := os.MkdirAll(d.cfg.DataDir, 0o700); err != nil {
-		return err
-	}
-	b, _ := json.Marshal(settings{SidebarFont: size})
-	if err := config.WriteFileAtomic(settingsPath(d.cfg), b, 0o600); err != nil {
+	if err := d.saveSettings(); err != nil {
 		return err
 	}
 	if n := d.sidebarNode(); n != nil && !d.relaunch {
@@ -134,7 +115,7 @@ func (d *Daemon) placeSidebar() {
 		d.sidebarReq = [2]int64{}
 		if !d.launched && d.d.Launch != nil {
 			d.launched = true
-			d.launchSidebar()
+			d.launchSidebar(true)
 		}
 		return
 	}

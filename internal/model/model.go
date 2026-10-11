@@ -97,7 +97,8 @@ func (w Workspace) Windows() []Window {
 type Snapshot struct {
 	Workspaces []Workspace `json:"workspaces"`
 	Condensed  bool        `json:"condensed"`
-	Font       float64     `json:"font,omitempty"` // sidebar font size (points)
+	Font       float64     `json:"font,omitempty"`  // sidebar font size (points)
+	Muted      bool        `json:"muted,omitempty"` // desktop notifications off
 	Now        time.Time   `json:"now"`
 }
 
