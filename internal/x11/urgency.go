@@ -51,3 +51,19 @@ func (u *Urgency) Set(xid int64, on bool) error {
 	binary.LittleEndian.PutUint32(data[0:4], flags)
 	return xproto.ChangePropertyChecked(u.conn, xproto.PropModeReplace, win, u.hints, u.hints, 32, 9, data).Check()
 }
+
+// Closed is closed when the X connection ends (the X session is over), so the
+// daemon can exit instead of lingering into the next login.
+func (u *Urgency) Closed() <-chan struct{} {
+	done := make(chan struct{})
+	go func() {
+		for {
+			ev, err := u.conn.WaitForEvent()
+			if ev == nil && err == nil {
+				close(done)
+				return
+			}
+		}
+	}()
+	return done
+}

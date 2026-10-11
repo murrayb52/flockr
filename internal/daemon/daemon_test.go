@@ -327,6 +327,17 @@ func TestSidebarDockedAndGapMatchesRealWidth(t *testing.T) {
 	if got := wm.took("gaps left"); len(got) != 1 || got[0] != "gaps left all set 283" {
 		t.Fatalf("gaps = %v", got)
 	}
+	wm.infos[0].Rect.X = 283 // i3 applied it
+	d.Refresh()
+	if got := wm.took("gaps left"); len(got) != 1 {
+		t.Fatalf("gap already right, nothing to do: %v", got)
+	}
+	wm.infos[0].Rect.X = 0 // something reset the gaps behind flock's back
+	d.Refresh()
+	if got := wm.took("gaps left"); len(got) != 2 {
+		t.Fatalf("a reset gap must be restored: %v", got)
+	}
+	wm.infos[0].Rect.X = 283
 	d.Refresh()
 	if got := wm.took("con_id=99"); len(got) != 5 {
 		t.Errorf("no repeated placement once settled: %v", got)

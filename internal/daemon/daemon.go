@@ -103,9 +103,19 @@ func (d *Daemon) Run(ctx context.Context) {
 	}
 	tick := time.NewTicker(time.Second)
 	defer tick.Stop()
-	d.Refresh()
+	lastOK := d.d.Now()
+	refresh := func() bool {
+		if d.Refresh() {
+			lastOK = d.d.Now()
+		}
+		// i3 gone for good (logout, X server ended): exit rather than linger.
+		// An i3 restart takes well under this.
+		return d.d.Now().Sub(lastOK) < 15*time.Second
+	}
+	refresh()
 	d.ensureSidebar()
 	for {
+		alive := true
 		select {
 		case <-ctx.Done():
 			d.d.WM.Command("gaps left all set 0")
@@ -113,20 +123,25 @@ func (d *Daemon) Run(ctx context.Context) {
 		case <-events:
 			// let a burst of i3 events settle into one refresh
 			time.Sleep(15 * time.Millisecond)
-			d.Refresh()
+			alive = refresh()
 		case <-d.dirty:
-			d.Refresh()
+			alive = refresh()
 		case <-tick.C:
-			d.Refresh()
+			alive = refresh()
 		case key := <-actions:
 			d.focusPane(key)
+		}
+		if !alive {
+			log.Printf("i3 is unreachable; exiting")
+			return
 		}
 	}
 }
 
 // Refresh rebuilds the snapshot from i3 + tmux and applies side effects:
 // tmux headers, urgency hints, sidebar placement and subscriber broadcast.
-func (d *Daemon) Refresh() {
+// It reports whether i3 answered.
+func (d *Daemon) Refresh() bool {
 	tree, infos, err := d.d.WM.Tree()
 	panes, perr := d.d.Mux.ListPanes()
 	d.mu.Lock()
@@ -142,6 +157,7 @@ func (d *Daemon) Refresh() {
 		log.Printf("tmux: %v", perr)
 	}
 	d.rebuild()
+	return err == nil
 }
 
 // syncPanes records the tmux sessions, consumes label prompt answers and drops

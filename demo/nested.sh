@@ -26,6 +26,7 @@ EOF
 
 start() {
   mkdir -p "$work"/{bin,run,data} "$work"/config/{flock,i3,polybar,alacritty,dunst}
+  : >"$work/daemon.log"
   chmod 700 "$work/run"
   (cd "$repo" && go build -o "$work/bin/flock" ./cmd/flock)
   cp "$repo/demo/fakeagent" "$work/bin/"

@@ -22,7 +22,15 @@ func runDaemon(cfg config.Config) error {
 	if err != nil {
 		return err
 	}
-	defer os.Remove(cfg.Socket)
+	// remove the socket on exit only if it is still ours (a newer daemon may
+	// have replaced a stale one at the same path)
+	if mine, err := os.Stat(cfg.Socket); err == nil {
+		defer func() {
+			if now, err := os.Stat(cfg.Socket); err == nil && os.SameFile(mine, now) {
+				os.Remove(cfg.Socket)
+			}
+		}()
+	}
 	if conf, err := writeTmuxConf(cfg); err == nil {
 		(tmux.Client{Socket: cfg.TmuxSocket}).Source(conf)
 	}
@@ -37,13 +45,18 @@ func runDaemon(cfg config.Config) error {
 	} else {
 		log.Printf("notifications disabled: %v", err)
 	}
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
 	if u, err := x11.New(); err == nil {
 		deps.Urgency = u
+		go func() { // the X session ended: exit rather than linger into the next login
+			<-u.Closed()
+			log.Printf("X connection closed; exiting")
+			stop()
+		}()
 	} else {
 		log.Printf("urgency hints disabled: %v", err)
 	}
-	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
-	defer stop()
 	d := daemon.New(cfg, deps)
 	go d.Serve(ctx, l)
 	d.Run(ctx)

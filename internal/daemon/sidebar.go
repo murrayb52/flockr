@@ -67,7 +67,9 @@ func (d *Daemon) placeSidebar() {
 	}
 	// The workspace rect already excludes the gap we add, so the left edge comes
 	// from the output itself; top and height still come from the workspace (bars).
+	gapNow := int64(-1)
 	if out := d.tree.FindChild(func(n *i3.Node) bool { return n.Type == i3.OutputNode && n.Name == output }); out != nil {
+		gapNow = area.X - out.Rect.X
 		area.X = out.Rect.X
 	}
 	want := int64(d.cfg.SidebarWidth)
@@ -96,9 +98,11 @@ func (d *Daemon) placeSidebar() {
 		d.markDirty() // read the real size back on the next refresh
 		return
 	}
-	if gap := int(n.Rect.Width); gap != d.gap {
+	// compare with the gap i3 actually has, not the one we last set: anything
+	// (a config reload, another tool) may have reset it
+	if gap := n.Rect.Width; gap != gapNow {
 		if err := d.d.WM.Command(fmt.Sprintf("gaps left all set %d", gap)); err == nil {
-			d.gap = gap
+			d.gap = int(gap)
 		}
 	}
 }
