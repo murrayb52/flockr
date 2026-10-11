@@ -19,6 +19,9 @@ type Config struct {
 	RailWidth     int    `toml:"rail_width"`    // pixels, condensed
 	Notifications bool   `toml:"notifications"`
 	Shell         string `toml:"shell"` // shell started by `flock term`; defaults to $SHELL
+	// Key names shown in terminal headers; match them to your i3 bindings.
+	LabelKey string `toml:"label_key"`
+	NotesKey string `toml:"notes_key"`
 
 	Socket     string `toml:"-"`
 	DataDir    string `toml:"-"`
@@ -45,6 +48,8 @@ func Load() (Config, error) {
 		RailWidth:     64,
 		Notifications: true,
 		Shell:         os.Getenv("SHELL"),
+		LabelKey:      "Alt+/",
+		NotesKey:      "Alt+.",
 		TmuxSocket:    "flock",
 	}
 	if c.Shell == "" {

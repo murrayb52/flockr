@@ -58,12 +58,12 @@ func TestBadFileIsAnError(t *testing.T) {
 
 func TestTerminalCommand(t *testing.T) {
 	cases := map[string]string{
-		"alacritty": "alacritty --class flock-sidebar,flock-sidebar -e flock sidebar",
-		"kitty":     "kitty --class flock-sidebar -e flock sidebar",
-		"ghostty":   "ghostty --class=flock-sidebar -e flock sidebar",
-		"wezterm":   "wezterm start --class flock-sidebar -- flock sidebar",
-		"foot":      "foot --app-id flock-sidebar flock sidebar",
-		"xterm":     "xterm -class flock-sidebar -e flock sidebar",
+		"alacritty":              "alacritty --class flock-sidebar,flock-sidebar -e flock sidebar",
+		"kitty":                  "kitty --class flock-sidebar -e flock sidebar",
+		"ghostty":                "ghostty --class=flock-sidebar -e flock sidebar",
+		"wezterm":                "wezterm start --class flock-sidebar -- flock sidebar",
+		"foot":                   "foot --app-id flock-sidebar flock sidebar",
+		"xterm":                  "xterm -class flock-sidebar -e flock sidebar",
 		"st -c {class} -e {cmd}": "st -c flock-sidebar -e flock sidebar",
 	}
 	for term, want := range cases {
