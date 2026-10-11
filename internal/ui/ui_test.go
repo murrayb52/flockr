@@ -65,7 +65,7 @@ func TestElapsed(t *testing.T) {
 func TestSub(t *testing.T) {
 	now := time.Date(2026, 1, 1, 0, 1, 0, 0, time.UTC)
 	a := &model.Agent{Kind: "pi", State: model.Input, Since: now.Add(-6 * time.Second)}
-	if got := Sub(term("", "/x", "pi", a), now, "/home/u"); got != "pi · needs input · 6s" {
+	if got := Sub(term("", "/x", "pi", a), now, "/home/u"); got != "needs input · 6s" {
 		t.Errorf("got %q", got)
 	}
 	if got := Sub(term("", "/home/u/code", "zsh", nil), now, "/home/u"); got != "zsh · ~/code" {

@@ -182,7 +182,7 @@ func Home(path, home string) string {
 func Sub(w model.Window, now time.Time, home string) string {
 	if t := w.Term; t != nil {
 		if a := t.Agent; a != nil {
-			return KindName(a.Kind) + " · " + StateText(a) + " · " + Elapsed(now.Sub(a.Since))
+			return StateText(a) + " · " + Elapsed(now.Sub(a.Since))
 		}
 		cmd := t.Command
 		if cmd == "" {
@@ -204,7 +204,7 @@ type TileStyle struct{ Glyph, BG, FG string }
 
 var tiles = map[string]TileStyle{
 	"claude": {"✻", "#d97757", "#ffffff"}, "pi": {"π", "#6d4fd8", "#ffffff"}, "shell": {"›_", "#2b303b", "#7ee787"},
-	"firefox": {"◉", "#e66000", "#ffd567"}, "chrome": {"◎", "#1a73e8", "#ffffff"}, "code": {"{}", "#1f6feb", "#ffffff"},
+	"firefox": {"◐", "#e66000", "#ffd567"}, "chrome": {"◎", "#1a73e8", "#ffffff"}, "code": {"{}", "#1f6feb", "#ffffff"},
 	"obsidian": {"◆", "#4c3a8f", "#ffffff"}, "music": {"♪", "#000000", "#ffffff"}, "mail": {"✉", "#b23a48", "#ffffff"},
 	"chat": {"✆", "#4a154b", "#ffffff"}, "files": {"▤", "#5c6b7a", "#ffffff"}, "terminal": {"›_", "#2b303b", "#c8ccd4"},
 }
