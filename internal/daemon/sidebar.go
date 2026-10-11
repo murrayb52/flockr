@@ -7,6 +7,8 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"strings"
+	"time"
 
 	"github.com/murrayb52/flock/internal/config"
 
@@ -97,6 +99,24 @@ func (d *Daemon) setFont(size, step float64) error {
 	return nil
 }
 
+// rendered reports whether the sidebar window sits inside its floating
+// container, which i3 only guarantees for windows it is currently drawing.
+func rendered(root *i3.Node, n *i3.Node) bool {
+	parent := root.FindChild(func(c *i3.Node) bool {
+		for _, k := range c.Nodes {
+			if k.ID == n.ID {
+				return true
+			}
+		}
+		return false
+	})
+	if parent == nil || parent.Type != i3.FloatingCon || parent.Rect.Width == 0 {
+		return true
+	}
+	p, r := parent.Rect, n.Rect
+	return r.X >= p.X && r.Y >= p.Y && r.X+r.Width <= p.X+p.Width && r.Y+r.Height <= p.Y+p.Height
+}
+
 func abs(n int64) int64 {
 	if n < 0 {
 		return -n
@@ -128,6 +148,12 @@ func (d *Daemon) placeSidebar() {
 		return
 	}
 	d.launched = false // the launched window has arrived
+	if !rendered(d.tree, n) {
+		// i3 has moved the floating container but not the window itself: the
+		// window is hidden (e.g. behind a fullscreen one). Re-sending commands
+		// now would only loop; place it once it is drawn again.
+		return
+	}
 	if d.relaunch && n.ID != d.sidebarStyled {
 		d.relaunch = false
 	}
@@ -168,6 +194,14 @@ func (d *Daemon) placeSidebar() {
 		cmds = append(cmds, con+fmt.Sprintf("resize set %d px %d px", want, area.Height))
 	}
 	if len(cmds) > 0 {
+		// the same commands again within a second: i3 is not applying them
+		// (yet); leave it to the next tick rather than spin
+		key := strings.Join(cmds, ";")
+		now := d.d.Now()
+		if key == d.placed && now.Sub(d.placedAt) < time.Second {
+			return
+		}
+		d.placed, d.placedAt = key, now
 		if err := d.d.WM.Command(cmds...); err != nil {
 			log.Printf("placing sidebar: %v", err)
 		}

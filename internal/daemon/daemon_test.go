@@ -348,6 +348,28 @@ func TestSidebarDockedAndGapMatchesRealWidth(t *testing.T) {
 	}
 }
 
+func TestSidebarHiddenBehindFullscreenIsLeftAlone(t *testing.T) {
+	d, wm, _, _, _ := fixture(t)
+	side := &i3.Node{ID: 99, Window: 9900, Name: "sidebar", WindowProperties: i3.WindowProperties{Class: "flock-sidebar"},
+		Rect: i3.Rect{X: 597, Y: 295, Width: 800, Height: 600}} // stale: not drawn
+	wm.root.Nodes[0].Nodes[0].Nodes[0].FloatingNodes = []*i3.Node{{Type: i3.FloatingCon,
+		Rect: i3.Rect{X: 0, Y: 28, Width: 280, Height: 1052}, Nodes: []*i3.Node{side}}}
+	for i := 0; i < 3; i++ {
+		d.Refresh()
+	}
+	if got := wm.took("con_id=99"); len(got) != 0 {
+		t.Errorf("no commands for a window i3 is not drawing: %v", got)
+	}
+	if got := wm.took("gaps left"); len(got) != 0 {
+		t.Errorf("gap from a stale width: %v", got)
+	}
+	select {
+	case <-d.dirty:
+		t.Error("must not ask for an immediate refresh (that loops)")
+	default:
+	}
+}
+
 func TestSidebarFontReopensAtNewSizeKeepingGap(t *testing.T) {
 	d, wm, _, _, _ := fixture(t)
 	var launched []string

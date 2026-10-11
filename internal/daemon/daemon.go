@@ -62,8 +62,10 @@ type Daemon struct {
 	sidebarReq    [2]int64                     // last requested sidebar width/height
 	sidebarStyled i3.NodeID                    // sidebar con already given border/sticky
 	launched      bool
-	relaunch      bool    // sidebar closed to reopen at a new font size
-	font          float64 // sidebar font size (points)
+	placed        string    // last sidebar placement commands sent…
+	placedAt      time.Time // …and when
+	relaunch      bool      // sidebar closed to reopen at a new font size
+	font          float64   // sidebar font size (points)
 	dirty         chan struct{}
 }
 
