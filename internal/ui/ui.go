@@ -64,6 +64,9 @@ func Name(w model.Window) (string, bool) {
 		if t.Label != "" {
 			return t.Label, false
 		}
+		if k := commandKind(t.Command); k != "" {
+			return KindName(k) + " — " + filepath.Base(t.Cwd), true
+		}
 		cmd := t.Command
 		if cmd == "" {
 			cmd = "shell"
@@ -209,13 +212,25 @@ var tiles = map[string]TileStyle{
 	"chat": {"✆", "#4a154b", "#ffffff"}, "files": {"▤", "#5c6b7a", "#ffffff"}, "terminal": {"›_", "#2b303b", "#c8ccd4"},
 }
 
+// commandKind recognises an agent from the pane's foreground command, so the
+// icon changes as soon as it starts (and without hooks installed).
+func commandKind(cmd string) string {
+	switch cmd {
+	case "claude", "pi":
+		return cmd
+	}
+	return ""
+}
+
 // Tile is the coloured glyph icon for a window.
 func Tile(w model.Window) TileStyle {
 	if t := w.Term; t != nil {
+		kind := commandKind(t.Command)
 		if t.Agent != nil {
-			if s, ok := tiles[t.Agent.Kind]; ok {
-				return s
-			}
+			kind = t.Agent.Kind
+		}
+		if s, ok := tiles[kind]; ok {
+			return s
 		}
 		return tiles["shell"]
 	}

@@ -86,6 +86,12 @@ func TestTiles(t *testing.T) {
 	if Tile(term("", "/", "zsh", nil)).Glyph != "›_" {
 		t.Error("shell tile")
 	}
+	if Tile(term("", "/", "claude", nil)).Glyph != "✻" {
+		t.Error("a running claude gets its icon before any hook arrives")
+	}
+	if n, auto := Name(term("", "/x/api", "claude", nil)); n != "Claude Code — api" || !auto {
+		t.Errorf("name = %q", n)
+	}
 	if Tile(model.Window{App: "gimp", Class: "Gimp"}).Glyph != "G" {
 		t.Error("fallback tile uses first letter")
 	}
