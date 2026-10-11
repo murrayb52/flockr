@@ -5,18 +5,18 @@
 #   claude → `flock hook claude <Event>` with Claude Code's JSON payloads
 #   pi     → `flock event pi …`
 #
-# usage: fakeagent claude|pi [--ask] [--slow] "first prompt" ["next prompt" ...]
-#   --ask   stop for permission/a question before finishing (answer with y)
+# usage: fakeagent claude|pi [--ask] [--slow] [--resume ID] "first prompt" ["next prompt" ...]
+#   --ask        stop for permission/a question before finishing (answer with y)
+#   --resume ID  continue session ID (flock restores its label and notes)
 # Must be run as ./fakeagent (not `bash fakeagent`) so the pane's command is
 # "fakeagent" rather than a shell.
 
 kind=$1; shift
-ask=0; pause=1.4
+ask=0; pause=1.4; sid="demo-$kind-$(printf '%04x' $RANDOM)"; source=startup
 while [[ $1 == --* ]]; do
-  case $1 in --ask) ask=1 ;; --slow) pause=2.5 ;; esac
+  case $1 in --ask) ask=1 ;; --slow) pause=2.5 ;; --resume) sid=$2; source=resume; shift ;; esac
   shift
 done
-sid="demo-$kind-$(printf '%04x' $RANDOM)"
 orange=$'\e[38;5;173m'; purple=$'\e[38;5;141m'; green=$'\e[38;5;71m'; dim=$'\e[2m'; bold=$'\e[1m'; r=$'\e[0m'
 
 emit() { # emit EVENT [json fields...] / pi: emit NAME key=value...
@@ -32,10 +32,10 @@ json() { printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'; }
 if [[ $kind == claude ]]; then
   printf '%s╭──────────────────────────────╮%s\n%s│%s %s✻%s Claude Code  %s%s%s\n%s╰──────────────────────────────╯%s\n\n' \
     "$orange" "$r" "$orange" "$r" "$orange" "$r" "$dim" "${PWD/#$HOME/~}" "$r" "$orange" "$r"
-  emit SessionStart ',"source":"startup"'
+  emit SessionStart ",\"source\":\"$source\""
 else
   printf '%sπ pi%s %s· %s%s\n\n' "$purple" "$r" "$dim" "${PWD/#$HOME/~}" "$r"
-  emit start source=startup
+  emit start source="$source"
 fi
 
 steps_claude=("Read|src/routes/lists.ts|Read 140 lines" "Grep|\"paginate\"|Found 2 files" "Update|src/routes/lists.ts|Updated with 31 additions" "Bash|npm run typecheck|No errors")
@@ -97,3 +97,4 @@ while true; do
   [[ -n $next ]] && turn "$next"
 done
 if [[ $kind == claude ]]; then emit SessionEnd ',"reason":"prompt_input_exit"'; else emit end; fi
+printf '%sResume this session with:%s fakeagent %s --resume %s\n' "$dim" "$r" "$kind" "$sid"

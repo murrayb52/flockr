@@ -26,7 +26,6 @@ var (
 	stSlot   = lipgloss.NewStyle().Foreground(c(ui.ColFaint))
 	stNotes  = lipgloss.NewStyle().Foreground(c(ui.ColBlue))
 	stEye    = lipgloss.NewStyle().Foreground(c("#7d8799"))
-	stFocus  = lipgloss.NewStyle().Background(c(ui.ColRowBG))
 	stEmpty  = lipgloss.NewStyle().Foreground(c("#9fb8a8")).Italic(true)
 	stLegend = lipgloss.NewStyle().Foreground(c(ui.ColDim))
 )
@@ -62,15 +61,6 @@ func logo(s model.Status, tick int) string {
 		return " "
 	}
 	return lipgloss.NewStyle().Foreground(c(col)).Bold(true).Render(g)
-}
-
-// pad right-aligns right within width after left, truncating left if needed.
-func pad(left, right string, width int) string {
-	lw, rw := lipgloss.Width(left), lipgloss.Width(right)
-	if lw+rw > width {
-		return left
-	}
-	return left + strings.Repeat(" ", width-lw-rw) + right
 }
 
 func trunc(s string, n int) string {
@@ -114,6 +104,14 @@ func expanded(ws model.Workspace, f Frame) []Line {
 }
 
 func row(w model.Window, f Frame) []Line {
+	// Every segment carries the row background itself: wrapping the finished
+	// line in a background style does not survive the segments' own resets.
+	base := lipgloss.NewStyle()
+	if w.Focused {
+		base = base.Background(c(ui.ColRowBG))
+	}
+	on := func(st lipgloss.Style) lipgloss.Style { return st.Inherit(base) }
+	sp := func(n int) string { return base.Render(strings.Repeat(" ", max(n, 0))) }
 	a := ui.AgentOf(w)
 	status := ui.StatusOf(a)
 	slot := "  "
@@ -122,26 +120,28 @@ func row(w model.Window, f Frame) []Line {
 	}
 	right := ""
 	if done, total := ui.NotesCount(a); total > 0 {
-		right = stNotes.Render(fmt.Sprintf("[%d/%d]", done, total))
+		right = on(stNotes).Render(fmt.Sprintf("[%d/%d]", done, total))
 	}
 	if w.Visible {
-		right += " " + stEye.Render("◉")
+		right += sp(1) + on(stEye).Render("◉")
 	} else {
-		right += "  "
+		right += sp(2)
 	}
-	right += " "
+	right += sp(1)
 	name, auto := ui.Name(w)
-	nameStyle := stName
+	nameStyle := on(stName)
 	if auto {
-		nameStyle = stAuto
+		nameStyle = on(stAuto)
 	}
-	prefix := stSlot.Render(slot) + " " + tile(w) + " "
+	prefix := on(stSlot).Render(slot) + sp(1) + tile(w) + sp(1)
 	room := f.Width - lipgloss.Width(prefix) - lipgloss.Width(right) - 1
-	line1 := pad(prefix+nameStyle.Render(trunc(name, room)), right, f.Width)
+	left := prefix + nameStyle.Render(trunc(name, room))
+	line1 := left + sp(f.Width-lipgloss.Width(left)-lipgloss.Width(right)) + right
 
-	lead := "      "
+	lead := sp(6)
 	if a != nil {
-		lead = "    " + logo(status, f.Tick) + " "
+		g, col := ui.Logo(status, f.Tick)
+		lead = sp(4) + on(lipgloss.NewStyle().Foreground(c(col)).Bold(true)).Render(g) + sp(1)
 	}
 	room = f.Width - lipgloss.Width(lead) - 1
 	sub := trunc(ui.Sub(w, f.Now, f.Home), room)
@@ -149,18 +149,15 @@ func row(w model.Window, f Frame) []Line {
 		el := " · " + ui.Elapsed(f.Now.Sub(a.Since))
 		sub = trunc(ui.StateText(a), room-runewidth.StringWidth(el)) + el
 	}
-	subStyle := stSub
+	subStyle := on(stSub)
 	switch status {
 	case model.StatusInput:
-		subStyle = stSub.Foreground(c("#ff8a80"))
+		subStyle = subStyle.Foreground(c("#ff8a80"))
 	case model.StatusDone:
-		subStyle = stSub.Foreground(c(ui.ColOK))
+		subStyle = subStyle.Foreground(c(ui.ColOK))
 	}
 	line2 := lead + subStyle.Render(sub)
-	if w.Focused {
-		line1 = stFocus.Width(f.Width).Render(line1)
-		line2 = stFocus.Width(f.Width).Render(line2)
-	}
+	line2 += sp(f.Width - lipgloss.Width(line2))
 	return []Line{{Text: line1, ConID: w.ConID}, {Text: line2, ConID: w.ConID}}
 }
 
@@ -186,9 +183,6 @@ func rail(ws model.Workspace, f Frame) []Line {
 				mark = stSlot.Render("▏")
 			}
 			line := mark + tile(w) + logo(ui.StatusOf(ui.AgentOf(w)), f.Tick)
-			if w.Focused {
-				line = stFocus.Width(f.Width).Render(line)
-			}
 			out = append(out, Line{Text: line, ConID: w.ConID}, Line{})
 		}
 	}

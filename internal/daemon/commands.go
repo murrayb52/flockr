@@ -13,7 +13,7 @@ import (
 	"go.i3wm.org/i3/v4"
 )
 
-const notesHeight = 12
+const notesHeight = 16 // most lines the notes drawer takes
 
 // Command runs one of the commands i3 bindings call (`flock <name> …`).
 func (d *Daemon) Command(args []string) protocol.Response {
@@ -153,8 +153,16 @@ func (d *Daemon) notes() protocol.Response {
 	name, _ := ui.Name(w)
 	title := " Notes · " + tmux.Escape(trim(name, 50)) + " "
 	cmd := shellQuote(d.d.Bin) + " notes-ui --pane " + shellQuote(w.Term.Pane)
+	// fit the drawer to its notes: rows + "new note" + blank + help, capped
+	height := len(w.Term.Agent.Notes) + 4
+	if height < 6 {
+		height = 6
+	}
+	if height > notesHeight {
+		height = notesHeight
+	}
 	go func() {
-		d.d.Mux.Popup(s, title, cmd, 2, notesHeight)
+		d.d.Mux.Popup(s, title, cmd, 2, height)
 		d.mu.Lock()
 		delete(d.popups, s)
 		d.mu.Unlock()
