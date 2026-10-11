@@ -57,19 +57,19 @@ func names(g model.Group) []string {
 
 func TestSplitOfTwoStacks(t *testing.T) {
 	api, mob, sh := win("Alacritty", "claude [flock:a1]"), win("Alacritty", "pi [flock:a2]"), win("Alacritty", "zsh [flock:a3]")
-	ff, code := win("firefox", "WellRead — Mozilla Firefox"), win("Code", "x - Visual Studio Code")
+	ff, code := win("firefox", "Bookshelf — Mozilla Firefox"), win("Code", "x - Visual Studio Code")
 	mob.Focused = true
 	left := focusFirst(con(i3.Stacked, api, mob, sh), mob)
 	right := con(i3.Stacked, ff, code)
-	w := ws(1, "1:WellRead", i3.SplitH, left, right)
+	w := ws(1, "1:Bookshelf", i3.SplitH, left, right)
 	terms := map[string]*model.Term{"a1": {Session: "a1"}, "a2": {Session: "a2"}, "a3": {Session: "a3"}}
-	got := Build(root(w), []i3.Workspace{{Num: 1, Name: "1:WellRead", Focused: true, Visible: true, Output: "eDP-1"}}, terms)
+	got := Build(root(w), []i3.Workspace{{Num: 1, Name: "1:Bookshelf", Focused: true, Visible: true, Output: "eDP-1"}}, terms)
 
 	if len(got) != 1 {
 		t.Fatalf("workspaces = %d (scratchpad must be skipped)", len(got))
 	}
 	g := got[0]
-	if g.Name != "WellRead" || g.Num != 1 || !g.Focused || len(g.Groups) != 2 {
+	if g.Name != "Bookshelf" || g.Num != 1 || !g.Focused || len(g.Groups) != 2 {
 		t.Fatalf("workspace = %+v", g)
 	}
 	if g.Groups[0].Label != "left · stack of 3" || g.Groups[1].Label != "right · stack of 2" {

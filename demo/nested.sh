@@ -55,11 +55,11 @@ bindsym \$mod+v split v
 bindsym \$mod+s layout stacking
 bindsym \$mod+e layout toggle split
 bindsym \$mod+Shift+q kill
-bindsym \$mod+1 workspace number "1:WellRead"
-bindsym \$mod+2 workspace number "2:StudySmarterSite"
+bindsym \$mod+1 workspace number "1:Bookshelf"
+bindsym \$mod+2 workspace number "2:Website"
 bindsym \$mod+3 workspace number "3:Life admin"
 bindsym \$mod+4 workspace number "4:flock"
-exec --no-startup-id i3-msg workspace number "1:WellRead"
+exec --no-startup-id i3-msg workspace number "1:Bookshelf"
 EOF
   cat > "$work/config/polybar/config.ini" <<'EOF'
 [bar/flock]

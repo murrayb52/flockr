@@ -19,15 +19,15 @@ sleep 3
 k() { xdotool key --delay 90 "$@"; }
 ty() { xdotool type --delay 12 "$1"; }
 term() { k super+Return; sleep 1.2; ty "$1"; k Return; sleep 0.6; }
-mkdir -p /tmp/flock-demo/wellread/{api,app} /tmp/flock-demo/studysmarter
+mkdir -p /tmp/flock-demo/bookshelf/{api,app} /tmp/flock-demo/website
 
 # workspace 2 has an agent of its own (watch its logo on the bar)
 k super+2; sleep 0.5
-term "cd /tmp/flock-demo/studysmarter && clear && fakeagent claude --delay 9 'rewrite the pricing page copy'"
+term "cd /tmp/flock-demo/website && clear && fakeagent claude --delay 9 'rewrite the pricing page copy'"
 k super+1; sleep 0.5
-term "cd /tmp/flock-demo/wellread/api && clear && fakeagent claude --ask --delay 4 'add pagination to the reading-list endpoint'"
-term "cd /tmp/flock-demo/wellread/app && clear && fakeagent pi --delay 3 'add offline caching to the book detail screen'"
-term "cd /tmp/flock-demo/wellread && clear"
+term "cd /tmp/flock-demo/bookshelf/api && clear && fakeagent claude --ask --delay 4 'add pagination to the reading-list endpoint'"
+term "cd /tmp/flock-demo/bookshelf/app && clear && fakeagent pi --delay 3 'add offline caching to the book detail screen'"
+term "cd /tmp/flock-demo/bookshelf && clear"
 
 ffmpeg -y -loglevel error -f x11grab -draw_mouse 0 -framerate 12 -video_size "$FLOCK_SIZE" -i "$DISPLAY" \
   -c:v libx264 -preset ultrafast -crf 16 "$tmp/demo.mp4" &

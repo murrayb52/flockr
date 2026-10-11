@@ -270,17 +270,17 @@ const col = (...wins) => ({wins, f:0});
 const P = '<span class="pr">you@box</span>';
 const prompt = cwd => `${P} <span class="pd">${esc(cwd)}</span> ❯ `;
 const WS = [
-  {n:1, name:'WellRead', dir:'~/code/wellread', fc:0, cols:[
-    col(term('', '~/code/wellread/api'), term('', '~/code/wellread/app'),
-        term('', '~/code/wellread/app', 'zsh', [prompt('~/code/wellread/app') + 'npm run dev', '',
+  {n:1, name:'Bookshelf', dir:'~/code/bookshelf', fc:0, cols:[
+    col(term('', '~/code/bookshelf/api'), term('', '~/code/bookshelf/app'),
+        term('', '~/code/bookshelf/app', 'zsh', [prompt('~/code/bookshelf/app') + 'npm run dev', '',
           '  <span class="ok">VITE v6.3.1</span>  ready in 412 ms', '', '  ➜  Local:   <span class="blue">http://localhost:5173/</span>',
           '<span class="dim">14:02:11</span> [vite] hmr update /src/screens/Book.tsx'])),
-    col(app('web', 'WellRead — localhost:5173'), app('code', 'wellread — Visual Studio Code'))]},
-  {n:2, name:'StudySmarterSite', dir:'~/code/studysmarter-site', fc:0, cols:[
-    col(term('', '~/code/studysmarter-site'),
-        term('', '~/code/studysmarter-site', 'zsh', [prompt('~/code/studysmarter-site') + 'git log --oneline -3',
+    col(app('web', 'Bookshelf — localhost:5173'), app('code', 'bookshelf — Visual Studio Code'))]},
+  {n:2, name:'Website', dir:'~/code/website', fc:0, cols:[
+    col(term('', '~/code/website'),
+        term('', '~/code/website', 'zsh', [prompt('~/code/website') + 'git log --oneline -3',
           '<span class="amb">a41c9e2</span> hero: 2x srcset', '<span class="amb">9b02f1d</span> pricing table copy', '<span class="amb">77d0e3a</span> deploy previews'])),
-    col(app('web', 'StudySmarter — staging preview'))]},
+    col(app('web', 'Website — staging preview'))]},
   {n:3, name:'Life admin', dir:'~', fc:0, cols:[
     col(term('', '~/admin/budget'), app('web', 'Home insurance quotes'), app('music', 'Tidal — Now playing'))]},
   {n:4, name:'flock', dir:'~/projects/flock', fc:0, cols:[
@@ -574,7 +574,7 @@ function appView(w) {
   if (w.app === 'web') return `<div class="app"><div class="urlbar">◀ ▶ ⟳ <span class="u2">${esc(w.title.split(' — ').pop())}</span></div>
     <div class="page"><div class="blk" style="width:40%;height:22px;background:#c5c5d0"></div><div class="blk" style="width:85%"></div>
     <div class="blk" style="width:70%"></div><div class="blk" style="width:78%"></div><div class="blk" style="width:50%;height:120px"></div></div></div>`;
-  if (w.app === 'code') return `<div class="code-app"><div class="tree">▾ wellread<br>&nbsp; ▸ api<br>&nbsp; ▾ app<br>&nbsp;&nbsp;&nbsp; Book.tsx<br>&nbsp;&nbsp;&nbsp; cache.ts</div>
+  if (w.app === 'code') return `<div class="code-app"><div class="tree">▾ bookshelf<br>&nbsp; ▸ api<br>&nbsp; ▾ app<br>&nbsp;&nbsp;&nbsp; Book.tsx<br>&nbsp;&nbsp;&nbsp; cache.ts</div>
     <div class="ed"><span class="pi">export async function</span> getBook(id) {<br>&nbsp; <span class="pi">const</span> hit = <span class="pi">await</span> cache.get(id)<br>&nbsp; <span class="pi">if</span> (hit) <span class="pi">return</span> hit<br>&nbsp; …<br>}</div></div>`;
   return `<div class="music"><div class="art"></div><div>Now playing</div><div class="dim">track 4 · 2:13 / 5:40</div></div>`;
 }

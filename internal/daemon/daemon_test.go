@@ -109,7 +109,7 @@ type fakeUrg map[int64]bool
 
 func (f fakeUrg) Set(x int64, on bool) error { f[x] = on; return nil }
 
-// ---- fixture: workspace 1 "WellRead" with a stack of two flock terminals + firefox ----
+// ---- fixture: workspace 1 "Bookshelf" with a stack of two flock terminals + firefox ----
 
 func fixture(t *testing.T) (*Daemon, *fakeWM, *fakeMux, *fakeNotifier, fakeUrg) {
 	t.Helper()
@@ -117,11 +117,11 @@ func fixture(t *testing.T) (*Daemon, *fakeWM, *fakeMux, *fakeNotifier, fakeUrg) 
 	mob := &i3.Node{ID: 12, Window: 1200, Name: "pi [flock:s2]", WindowProperties: i3.WindowProperties{Class: "Alacritty"}}
 	ff := &i3.Node{ID: 13, Window: 1300, Name: "x — Mozilla Firefox", WindowProperties: i3.WindowProperties{Class: "firefox"}, Focused: true}
 	stack := &i3.Node{ID: 10, Layout: i3.Stacked, Nodes: []*i3.Node{api, mob}, Focus: []i3.NodeID{11, 12}}
-	ws1 := &i3.Node{ID: 2, Type: i3.WorkspaceNode, Name: "1:WellRead", Layout: i3.SplitH, Nodes: []*i3.Node{stack, ff}, Focus: []i3.NodeID{13, 10}}
+	ws1 := &i3.Node{ID: 2, Type: i3.WorkspaceNode, Name: "1:Bookshelf", Layout: i3.SplitH, Nodes: []*i3.Node{stack, ff}, Focus: []i3.NodeID{13, 10}}
 	root := &i3.Node{Type: i3.Root, Nodes: []*i3.Node{{Type: i3.OutputNode, Name: "eDP-1", Rect: i3.Rect{X: 0, Y: 0, Width: 1920, Height: 1080},
 		Nodes: []*i3.Node{{Name: "content", Nodes: []*i3.Node{ws1}}}}}}
 	// i3 reports the workspace rect inside the gap flock adds (x=280 here)
-	wm := &fakeWM{root: root, infos: []i3.Workspace{{Num: 1, Name: "1:WellRead", Focused: true, Visible: true, Output: "eDP-1",
+	wm := &fakeWM{root: root, infos: []i3.Workspace{{Num: 1, Name: "1:Bookshelf", Focused: true, Visible: true, Output: "eDP-1",
 		Rect: i3.Rect{X: 280, Y: 28, Width: 1640, Height: 1052}}}}
 	mux := &fakeMux{panes: []tmux.Pane{
 		{Session: "s1", ID: "%1", Cwd: "/home/u/code/api", Command: "claude"},
@@ -166,7 +166,7 @@ func TestInputNotifiesAndRaisesUrgency(t *testing.T) {
 	d.HandleEvent(agents.Event{Agent: "claude", Name: "input", Pane: "%1", SessionID: "s-claude", Detail: "npm test"})
 
 	if len(n.shown) != 1 || !n.shown[0].critical || n.shown[0].title != "add pagination needs your input" ||
-		!strings.Contains(n.shown[0].body, "Wants to run: npm test") || !strings.Contains(n.shown[0].body, "WellRead") {
+		!strings.Contains(n.shown[0].body, "Wants to run: npm test") || !strings.Contains(n.shown[0].body, "Bookshelf") {
 		t.Fatalf("notifications = %+v", n.shown)
 	}
 	if !u[1100] {

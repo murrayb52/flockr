@@ -152,3 +152,7 @@ demo/record.sh          # re-record docs/demo.gif with a scripted fake agent (no
 
 The design notes are in [`docs/superpowers/specs`](docs/superpowers/specs), and
 [`demo/flock-mockup.html`](demo/flock-mockup.html) is the interactive mockup flock was designed from.
+
+## Licence
+
+[MIT](LICENSE) © 2026 Murray Buchanan

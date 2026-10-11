@@ -71,7 +71,7 @@ func TestSub(t *testing.T) {
 	if got := Sub(term("", "/home/u/code", "zsh", nil), now, "/home/u"); got != "zsh · ~/code" {
 		t.Errorf("got %q", got)
 	}
-	if got := Sub(model.Window{App: "firefox", Title: "WellRead — Mozilla Firefox"}, now, "/home/u"); got != "WellRead" {
+	if got := Sub(model.Window{App: "firefox", Title: "Bookshelf — Mozilla Firefox"}, now, "/home/u"); got != "Bookshelf" {
 		t.Errorf("got %q", got)
 	}
 }

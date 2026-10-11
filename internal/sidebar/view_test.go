@@ -17,10 +17,10 @@ func snapshot() model.Snapshot {
 			Notes: []model.Note{{Text: "a", Done: true}, {Text: "b"}, {Text: "c"}}}}}
 	mob := model.Window{ConID: 12, App: "term", Slot: 2, Term: &model.Term{Cwd: "/w/app", Command: "node",
 		Agent: &model.Agent{Kind: "pi", State: model.Input, Prompt: "add offline caching to the book detail screen", Since: now.Add(-6 * time.Second)}}}
-	ff := model.Window{ConID: 13, App: "firefox", Class: "firefox", Title: "WellRead — Mozilla Firefox", Visible: true}
+	ff := model.Window{ConID: 13, App: "firefox", Class: "firefox", Title: "Bookshelf — Mozilla Firefox", Visible: true}
 	return model.Snapshot{Workspaces: []model.Workspace{
 		{Num: 2, Name: "Other"},
-		{Num: 1, Name: "WellRead", Focused: true, Groups: []model.Group{
+		{Num: 1, Name: "Bookshelf", Focused: true, Groups: []model.Group{
 			{Label: "left · stack of 2", Windows: []model.Window{api, mob}},
 			{Label: "right", Windows: []model.Window{ff}},
 		}},
@@ -39,7 +39,7 @@ func TestExpanded(t *testing.T) {
 	lines := Render(snapshot(), Frame{Width: 36, Now: now})
 	text := strings.Join(plain(lines), "\n")
 	for _, want := range []string{"LEFT · STACK OF 2", " 1  ✻  reading-list API", "[1/3] ◉", "Update lists.ts · 42s",
-		" 2  π  add offline caching", "needs input · 6s", "RIGHT", "Firefox", "WellRead", "needs you"} {
+		" 2  π  add offline caching", "needs input · 6s", "RIGHT", "Firefox", "Bookshelf", "needs you"} {
 		if !strings.Contains(text, want) {
 			t.Errorf("missing %q in:\n%s", want, text)
 		}
