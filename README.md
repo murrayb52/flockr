@@ -73,16 +73,15 @@ The important lines are:
 
 ```i3
 exec_always --no-startup-id flock daemon            # the daemon also opens the sidebar
-bindsym $mod+Return exec alacritty -e flock term    # terminals become flock terminals
+bindsym $mod+Return exec flock term                 # opens your default terminal as a flock terminal
 for_window [class="flock-sidebar"] floating enable, sticky enable, border none
 no_focus [class="flock-sidebar"]
 font pango:monospace 1                              # slim stack/tab title bars
 ```
 
-Any terminal works: `kitty -e flock term`, `ghostty -e flock term`, … With **gnome-terminal**, give
-the full path (`gnome-terminal -- ~/.local/bin/flock term`): it starts commands from a background
-server with systemd's `PATH`, which usually lacks `~/.local/bin`, so a bare `flock` finds util-linux's.
-For the bar, see
+`flock term` started from a key binding opens your default terminal (`$TERMINAL`, else
+`x-terminal-emulator`) running itself; set `terminal` in the config to choose another. Run inside an
+existing terminal, it turns that one into a flock terminal. For the bar, see
 [`examples/polybar.ini`](examples/polybar.ini). Remove the integrations with
 `flock uninstall claude|pi|all`.
 
@@ -133,8 +132,10 @@ flock event my-agent stop   session=$ID detail="All green."
 Optional, in `~/.config/flock/config.toml`:
 
 ```toml
-terminal = "alacritty"   # used to open the sidebar: alacritty, kitty, ghostty, wezterm, foot, xterm,
-                         # or a template such as "st -c {class} -f mono:size={font} -e {cmd}"
+terminal = "kitty"       # opened by `flock term` from a key binding; default: your default terminal
+                         # (or a template such as "my-term --run {cmd}")
+sidebar_terminal = "alacritty"  # must set its window class: alacritty, kitty, ghostty, wezterm, foot,
+                         # xterm, or a template such as "st -c {class} -f mono:size={font} -e {cmd}"
 sidebar_width = 280      # pixels
 sidebar_font_size = 11   # points; the sidebar's − + buttons override it (saved in ~/.local/share/flock)
 rail_width = 64

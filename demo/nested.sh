@@ -32,7 +32,7 @@ start() {
   cp "$repo/demo/fakeagent" "$work/bin/"
   [[ -d $HOME/.config/alacritty ]] && cp -r "$HOME/.config/alacritty/." "$work/config/alacritty/" || true
   [[ -f $HOME/.config/dunst/dunstrc ]] && cp "$HOME/.config/dunst/dunstrc" "$work/config/dunst/" || true
-  printf 'terminal = "alacritty"\n' > "$work/config/flock/config.toml"
+  printf 'terminal = "alacritty"\nsidebar_terminal = "alacritty"\n' > "$work/config/flock/config.toml"
 
   # the example snippet, with the daemon's log captured
   sed "s|exec_always --no-startup-id flock daemon|exec_always --no-startup-id flock daemon 2>>$work/daemon.log|" \

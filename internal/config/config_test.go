@@ -58,7 +58,7 @@ func TestBadFileIsAnError(t *testing.T) {
 	}
 }
 
-func TestTerminalCommand(t *testing.T) {
+func TestSidebarCommand(t *testing.T) {
 	cases := map[string]string{
 		"alacritty":              "alacritty --class flock-sidebar,flock-sidebar -o font.size=9.5 -e flock sidebar",
 		"kitty":                  "kitty --class flock-sidebar -o font_size=9.5 -e flock sidebar",
@@ -70,10 +70,32 @@ func TestTerminalCommand(t *testing.T) {
 		"st -c {class} -f mono:size={font} -e {cmd}": "st -c flock-sidebar -f mono:size=9.5 -e flock sidebar",
 	}
 	for term, want := range cases {
-		got := Config{Terminal: term}.TerminalCommand("flock-sidebar", "flock sidebar", 9.5)
+		got := Config{SidebarTerminal: term}.SidebarCommand("flock-sidebar", "flock sidebar", 9.5)
 		if got != want {
 			t.Errorf("%s: got %q want %q", term, got, want)
 		}
+	}
+}
+
+func TestOpenCommand(t *testing.T) {
+	cases := map[string]string{
+		"gnome-terminal":          "gnome-terminal -- '/b/flock' term",
+		"/usr/bin/kitty":          "kitty '/b/flock' term",
+		"alacritty":               "alacritty -e '/b/flock' term",
+		"sakura":                  "sakura -e '/b/flock' term",
+		"my-term --run {cmd} --x": "my-term --run '/b/flock' term --x",
+	}
+	for term, want := range cases {
+		if got := (Config{Terminal: term}).OpenCommand("'/b/flock' term"); got != want {
+			t.Errorf("%s: got %q want %q", term, got, want)
+		}
+	}
+}
+
+func TestDefaultTerminalPrefersEnv(t *testing.T) {
+	t.Setenv("TERMINAL", "foot")
+	if got := defaultTerminal(); got != "foot" {
+		t.Errorf("got %q", got)
 	}
 }
 

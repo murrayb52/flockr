@@ -374,7 +374,7 @@ func TestSidebarFontReopensAtNewSizeKeepingGap(t *testing.T) {
 	d, wm, _, _, _ := fixture(t)
 	var launched []string
 	d.d.Launch = func(c string) error { launched = append(launched, c); return nil }
-	d.cfg.Terminal = "alacritty"
+	d.cfg.SidebarTerminal = "alacritty"
 	side := &i3.Node{ID: 99, Window: 9900, Name: "sidebar", WindowProperties: i3.WindowProperties{Class: "flock-sidebar"},
 		Rect: i3.Rect{X: 0, Y: 28, Width: 280, Height: 1052}}
 	floats := &wm.root.Nodes[0].Nodes[0].Nodes[0].FloatingNodes

@@ -10,6 +10,7 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/mattn/go-isatty"
 	"github.com/murrayb52/flock/internal/config"
 	"github.com/murrayb52/flock/internal/tmux"
 )
@@ -31,9 +32,22 @@ func inFlockTmux(cfg config.Config) bool {
 }
 
 // runTerm replaces this process with a new session on flock's tmux server.
+// Started without a terminal (from an i3 binding), it first opens the
+// configured terminal running itself, by absolute path so that terminals
+// started with a different PATH (gnome-terminal's server) still find it.
 func runTerm(cfg config.Config, args []string) error {
 	if len(args) > 0 && args[0] == "--" {
 		args = args[1:]
+	}
+	if !isatty.IsTerminal(os.Stdin.Fd()) && !inFlockTmux(cfg) {
+		cmd := shellQuote(binPath()) + " term"
+		if len(args) > 0 {
+			cmd += " --"
+			for _, a := range args {
+				cmd += " " + shellQuote(a)
+			}
+		}
+		return launch(cfg.OpenCommand(cmd))
 	}
 	tmuxBin, err := exec.LookPath("tmux")
 	if err != nil {
@@ -77,4 +91,8 @@ func withoutTmux(env []string) []string {
 		}
 	}
 	return out
+}
+
+func shellQuote(s string) string {
+	return "'" + strings.ReplaceAll(s, "'", `'\''`) + "'"
 }

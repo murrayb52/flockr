@@ -14,15 +14,19 @@ import (
 )
 
 type Config struct {
-	// Terminal used to open the sidebar: a known name (alacritty, kitty, ghostty,
-	// wezterm, foot, xterm) or a template containing {class} and {cmd}, and
-	// optionally {font} for the font size.
-	Terminal      string  `toml:"terminal"`
-	SidebarWidth  int     `toml:"sidebar_width"`     // pixels, expanded
-	RailWidth     int     `toml:"rail_width"`        // pixels, condensed
-	SidebarFont   float64 `toml:"sidebar_font_size"` // points; the sidebar's − + buttons override it
-	Notifications bool    `toml:"notifications"`
-	Shell         string  `toml:"shell"` // shell started by `flock term`; defaults to $SHELL
+	// Terminal that `flock term` opens when started from a key binding: a
+	// known name, or a template containing {cmd}. Defaults to the system's
+	// default terminal ($TERMINAL, then x-terminal-emulator).
+	Terminal string `toml:"terminal"`
+	// Terminal for the sidebar window, which must be able to set its window
+	// class: alacritty, kitty, ghostty, wezterm, foot, xterm, or a template
+	// containing {class}, {cmd} and optionally {font}.
+	SidebarTerminal string  `toml:"sidebar_terminal"`
+	SidebarWidth    int     `toml:"sidebar_width"`     // pixels, expanded
+	RailWidth       int     `toml:"rail_width"`        // pixels, condensed
+	SidebarFont     float64 `toml:"sidebar_font_size"` // points; the sidebar's − + buttons override it
+	Notifications   bool    `toml:"notifications"`
+	Shell           string  `toml:"shell"` // shell started by `flock term`; defaults to $SHELL
 	// Key names shown in terminal headers; match them to your i3 bindings.
 	LabelKey string `toml:"label_key"`
 	NotesKey string `toml:"notes_key"`
@@ -47,15 +51,16 @@ func Path() string {
 
 func Load() (Config, error) {
 	c := Config{
-		Terminal:      detectTerminal(),
-		SidebarWidth:  280,
-		RailWidth:     64,
-		SidebarFont:   11,
-		Notifications: true,
-		Shell:         os.Getenv("SHELL"),
-		LabelKey:      "Alt+/",
-		NotesKey:      "Alt+.",
-		TmuxSocket:    "flock",
+		Terminal:        defaultTerminal(),
+		SidebarTerminal: detectTerminal(),
+		SidebarWidth:    280,
+		RailWidth:       64,
+		SidebarFont:     11,
+		Notifications:   true,
+		Shell:           os.Getenv("SHELL"),
+		LabelKey:        "Alt+/",
+		NotesKey:        "Alt+.",
+		TmuxSocket:      "flock",
 	}
 	if c.Shell == "" {
 		c.Shell = "/bin/sh"
@@ -139,6 +144,53 @@ var templates = map[string]string{
 	"xterm":     "xterm -class {class} -fa monospace -fs {font} -e {cmd}",
 }
 
+// runTemplates open a terminal running {cmd}.
+var runTemplates = map[string]string{
+	"alacritty":      "alacritty -e {cmd}",
+	"kitty":          "kitty {cmd}",
+	"ghostty":        "ghostty -e {cmd}",
+	"wezterm":        "wezterm start -- {cmd}",
+	"foot":           "foot {cmd}",
+	"xterm":          "xterm -e {cmd}",
+	"gnome-terminal": "gnome-terminal -- {cmd}",
+	"konsole":        "konsole -e {cmd}",
+	"xfce4-terminal": "xfce4-terminal -x {cmd}",
+	"terminator":     "terminator -x {cmd}",
+	"urxvt":          "urxvt -e {cmd}",
+	"st":             "st -e {cmd}",
+}
+
+// defaultTerminal is the system's default terminal: $TERMINAL, else what
+// x-terminal-emulator points at (Debian/Ubuntu), else the first one found.
+func defaultTerminal() string {
+	if t := os.Getenv("TERMINAL"); t != "" {
+		return t
+	}
+	if p, err := exec.LookPath("x-terminal-emulator"); err == nil {
+		if r, err := filepath.EvalSymlinks(p); err == nil {
+			return strings.TrimSuffix(filepath.Base(r), ".wrapper")
+		}
+	}
+	for _, name := range []string{"alacritty", "kitty", "ghostty", "wezterm", "foot", "gnome-terminal", "konsole", "xfce4-terminal", "xterm"} {
+		if _, err := exec.LookPath(name); err == nil {
+			return name
+		}
+	}
+	return "xterm"
+}
+
+// OpenCommand returns a shell command that opens the terminal for flock
+// terminals running cmd.
+func (c Config) OpenCommand(cmd string) string {
+	tpl := c.Terminal
+	if t, ok := runTemplates[filepath.Base(tpl)]; ok {
+		tpl = t
+	} else if !strings.Contains(tpl, "{cmd}") {
+		tpl += " -e {cmd}"
+	}
+	return strings.ReplaceAll(tpl, "{cmd}", cmd)
+}
+
 func detectTerminal() string {
 	for _, name := range []string{"alacritty", "kitty", "ghostty", "wezterm", "foot", "xterm"} {
 		if _, err := exec.LookPath(name); err == nil {
@@ -148,12 +200,12 @@ func detectTerminal() string {
 	return "xterm"
 }
 
-// TerminalCommand returns a shell command that opens the configured terminal
+// SidebarCommand returns a shell command that opens the sidebar terminal
 // with the given WM class and font size (points) running cmd.
-func (c Config) TerminalCommand(class, cmd string, font float64) string {
-	tpl, ok := templates[c.Terminal]
+func (c Config) SidebarCommand(class, cmd string, font float64) string {
+	tpl, ok := templates[c.SidebarTerminal]
 	if !ok {
-		tpl = c.Terminal
+		tpl = c.SidebarTerminal
 	}
 	size := strconv.FormatFloat(font, 'f', -1, 64)
 	return strings.NewReplacer("{class}", class, "{cmd}", cmd, "{font}", size).Replace(tpl)

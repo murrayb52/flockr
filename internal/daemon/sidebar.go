@@ -40,7 +40,7 @@ func (d *Daemon) launchSidebar(withMenu bool) {
 	if withMenu {
 		args += " --menu"
 	}
-	cmd := d.cfg.TerminalCommand(i3tree.SidebarClass, shellQuote(d.d.Bin)+args, d.font)
+	cmd := d.cfg.SidebarCommand(i3tree.SidebarClass, shellQuote(d.d.Bin)+args, d.font)
 	if err := d.d.Launch(cmd); err != nil {
 		log.Printf("launching sidebar: %v", err)
 	}
