@@ -76,6 +76,37 @@ func TestRail(t *testing.T) {
 	}
 }
 
+func TestFooterFontButtons(t *testing.T) {
+	s := snapshot()
+	s.Font = 9.5
+	lines := Render(s, Frame{Width: 36, Height: 30, Now: now})
+	if len(lines) != 30 {
+		t.Fatalf("%d lines, want the full height", len(lines))
+	}
+	foot := lines[29]
+	if got := ansi.Strip(foot.Text); got != " text  −  9.5  + " {
+		t.Errorf("footer = %q", got)
+	}
+	if a := foot.At(7); strings.Join(a, " ") != "sidebar font -1" {
+		t.Errorf("click on − = %v", a)
+	}
+	if a := foot.At(15); strings.Join(a, " ") != "sidebar font +1" {
+		t.Errorf("click on + = %v", a)
+	}
+	if a := foot.At(11); a != nil {
+		t.Errorf("the size itself is not a button: %v", a)
+	}
+	// too short for everything: the footer still gets the last row
+	lines = Render(s, Frame{Width: 36, Height: 4, Now: now})
+	if len(lines) != 4 || lines[3].At(7) == nil {
+		t.Errorf("short sidebar: %v", plain(lines))
+	}
+	rail := Render(s, Frame{Width: 8, Height: 20, Now: now})
+	if f := rail[19]; ansi.Strip(f.Text) != " − +" || f.At(1) == nil || f.At(3) == nil || f.At(2) != nil {
+		t.Errorf("rail footer = %q", ansi.Strip(f.Text))
+	}
+}
+
 func TestEmptyAndMissing(t *testing.T) {
 	s := model.Snapshot{Workspaces: []model.Workspace{{Num: 3, Focused: true}}}
 	if got := strings.Join(plain(Render(s, Frame{Width: 30})), ""); !strings.Contains(got, "empty workspace") {

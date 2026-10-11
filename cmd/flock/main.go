@@ -23,7 +23,7 @@ Usage:
   flock uninstall claude|pi|all
 
 Bindings (call these from i3):
-  flock sidebar [toggle|condense|expand|show]
+  flock sidebar [toggle|condense|expand|show|font +1|-1|SIZE]
   flock label                  name the focused terminal or agent
   flock notes                  open/close the focused agent's notes
   flock next                   focus the next agent that needs you

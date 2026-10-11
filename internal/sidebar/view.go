@@ -5,6 +5,7 @@ package sidebar
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -28,13 +29,31 @@ var (
 	stEye    = lipgloss.NewStyle().Foreground(c("#7d8799"))
 	stEmpty  = lipgloss.NewStyle().Foreground(c("#9fb8a8")).Italic(true)
 	stLegend = lipgloss.NewStyle().Foreground(c(ui.ColDim))
+	stButton = lipgloss.NewStyle().Foreground(c(ui.ColText)).Background(c("#3a3f4b")).Bold(true)
 )
 
 // Line is one rendered row plus the window it belongs to (0 = none), so
-// mouse clicks can be mapped back to windows.
+// mouse clicks can be mapped back to windows, and any buttons on it.
 type Line struct {
-	Text  string
-	ConID int64
+	Text    string
+	ConID   int64
+	Buttons []Button
+}
+
+// Button is a clickable cell range [From, To) that runs a daemon command.
+type Button struct {
+	From, To int
+	Args     []string
+}
+
+// At returns the command of the button covering column x, if any.
+func (l Line) At(x int) []string {
+	for _, b := range l.Buttons {
+		if x >= b.From && x < b.To {
+			return b.Args
+		}
+	}
+	return nil
 }
 
 type Frame struct {
@@ -70,16 +89,64 @@ func trunc(s string, n int) string {
 	return runewidth.Truncate(s, n, "…")
 }
 
-// Render draws the sidebar for the focused workspace.
+// Render draws the sidebar for the focused workspace, with the settings
+// footer on its last row (when the height is known) or after a blank line.
 func Render(snap model.Snapshot, f Frame) []Line {
 	ws, ok := snap.Current()
 	if !ok {
 		return []Line{{Text: stEmpty.Render(" waiting for i3…")}}
 	}
-	if f.Width <= RailColumns || snap.Condensed {
-		return rail(ws, f)
+	railMode := f.Width <= RailColumns || snap.Condensed
+	var body []Line
+	if railMode {
+		body = rail(ws, f)
+	} else {
+		body = expanded(ws, f)
 	}
-	return expanded(ws, f)
+	foot := footer(snap.Font, railMode)
+	if f.Height <= 1 {
+		return append(append(body, Line{}), foot)
+	}
+	if len(body) > f.Height-1 {
+		body = body[:f.Height-1]
+	}
+	for len(body) < f.Height-1 {
+		body = append(body, Line{})
+	}
+	return append(body, foot)
+}
+
+// footer is the font size control: − and + buttons around the size.
+func footer(font float64, railMode bool) Line {
+	var l Line
+	col := 0
+	add := func(text string, args ...string) {
+		w := lipgloss.Width(text)
+		if args != nil {
+			l.Buttons = append(l.Buttons, Button{From: col, To: col + w, Args: args})
+			text = stButton.Render(text)
+		}
+		l.Text += text
+		col += w
+	}
+	smaller := []string{"sidebar", "font", "-1"}
+	bigger := []string{"sidebar", "font", "+1"}
+	if railMode {
+		add(" ")
+		add("−", smaller...)
+		add(" ")
+		add("+", bigger...)
+		return l
+	}
+	size := "–"
+	if font > 0 {
+		size = strconv.FormatFloat(font, 'f', -1, 64)
+	}
+	add(stLegend.Render(" text "))
+	add(" − ", smaller...)
+	add(stName.Render(fmt.Sprintf(" %s ", size)))
+	add(" + ", bigger...)
+	return l
 }
 
 func expanded(ws model.Workspace, f Frame) []Line {

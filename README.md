@@ -24,7 +24,7 @@ every action is an **i3 binding**, so it works whichever agent has the keyboard.
 
 - **Sidebar** — the focused workspace's windows, grouped the way i3 lays them out (columns, stacks,
   tabs), with app icons, slot numbers, agent state and how long it has been in it. `Super+b` condenses it
-  to an icon rail.
+  to an icon rail; the `−` `+` buttons at its foot change its text size.
 - **Agent state** — working (amber spinner), needs you (red `!`), done but not yet seen (green `✓`) or
   idle (`○`), reported by the agents themselves through Claude Code hooks and a Pi extension.
 - **Notifications** — a desktop notification when an agent needs you or finishes out of sight; its
@@ -50,10 +50,16 @@ every action is an **i3 binding**, so it works whichever agent has the keyboard.
 ## Install
 
 ```sh
-go install github.com/murrayb52/flock/cmd/flock@latest   # puts flock in ~/go/bin (add it to PATH)
+GOBIN=~/.local/bin go install github.com/murrayb52/flock/cmd/flock@latest
+flock version           # must say "flock …", see below
 flock install claude    # adds hooks to ~/.claude/settings.json (keeps yours; backup saved)
 flock install pi        # writes ~/.pi/agent/extensions/flock.ts
 ```
+
+Most Linux systems already have a different `flock` (the file-locking tool from util-linux, in
+`/usr/bin`). Install this one into a directory that comes **before** `/usr/bin` in your `PATH` — and in
+i3's, which is the `PATH` your session started with. `~/.local/bin` usually is; `~/go/bin` usually
+is not. If `flock version` says `bad file descriptor`, that is util-linux's `flock`: fix the `PATH` order.
 
 Then wire it into i3. Copy [`examples/i3.conf`](examples/i3.conf) to `~/.config/i3/flock.conf`, adjust
 the bindings, and include it from your config:
@@ -124,8 +130,9 @@ Optional, in `~/.config/flock/config.toml`:
 
 ```toml
 terminal = "alacritty"   # used to open the sidebar: alacritty, kitty, ghostty, wezterm, foot, xterm,
-                         # or a template such as "st -c {class} -e {cmd}"
+                         # or a template such as "st -c {class} -f mono:size={font} -e {cmd}"
 sidebar_width = 280      # pixels
+sidebar_font_size = 11   # points; the sidebar's − + buttons override it (saved in ~/.local/share/flock)
 rail_width = 64
 notifications = true
 label_key = "Alt+/"      # key names shown in terminal headers — match your bindings

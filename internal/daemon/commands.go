@@ -52,6 +52,9 @@ func (d *Daemon) Command(args []string) protocol.Response {
 		if len(args) > 1 {
 			sub = args[1]
 		}
+		if sub == "font" {
+			return d.fontCmd(args[2:])
+		}
 		return d.sidebar(sub)
 	case "refresh":
 		d.markDirty()
@@ -175,6 +178,27 @@ func shellQuote(s string) string {
 	return "'" + strings.ReplaceAll(s, "'", `'\''`) + "'"
 }
 
+// fontCmd handles `sidebar font +1|-1|SIZE`.
+func (d *Daemon) fontCmd(args []string) protocol.Response {
+	if len(args) != 1 {
+		return fail("usage: sidebar font +N|-N|SIZE")
+	}
+	v, err := strconv.ParseFloat(args[0], 64)
+	if err != nil || v == 0 {
+		return fail("font size must be a number, or a step such as +1 or -1")
+	}
+	var size, step float64
+	if strings.HasPrefix(args[0], "+") || strings.HasPrefix(args[0], "-") {
+		step = v
+	} else {
+		size = v
+	}
+	if err := d.setFont(size, step); err != nil {
+		return fail(err.Error())
+	}
+	return ok("")
+}
+
 func (d *Daemon) sidebar(sub string) protocol.Response {
 	d.mu.Lock()
 	switch sub {
@@ -188,7 +212,7 @@ func (d *Daemon) sidebar(sub string) protocol.Response {
 		d.launched = false
 	default:
 		d.mu.Unlock()
-		return fail("usage: sidebar toggle|condense|expand|show")
+		return fail("usage: sidebar toggle|condense|expand|show|font +1|-1|SIZE")
 	}
 	d.rebuild()
 	d.mu.Unlock()

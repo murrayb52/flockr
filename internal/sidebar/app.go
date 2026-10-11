@@ -67,8 +67,13 @@ func (a *app) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return a, tick()
 	case tea.MouseMsg:
 		if m.Action == tea.MouseActionPress && m.Button == tea.MouseButtonLeft && m.Y < len(a.lines) {
-			if con := a.lines[m.Y].ConID; con != 0 {
-				go protocol.Call(a.socket, protocol.Request{Op: protocol.OpCommand, Args: []string{"jump", strconv.FormatInt(con, 10)}}, time.Second)
+			l := a.lines[m.Y]
+			args := l.At(m.X)
+			if args == nil && l.ConID != 0 {
+				args = []string{"jump", strconv.FormatInt(l.ConID, 10)}
+			}
+			if args != nil {
+				go protocol.Call(a.socket, protocol.Request{Op: protocol.OpCommand, Args: args}, time.Second)
 			}
 		}
 	case tea.KeyMsg:

@@ -62,6 +62,8 @@ type Daemon struct {
 	sidebarReq    [2]int64                     // last requested sidebar width/height
 	sidebarStyled i3.NodeID                    // sidebar con already given border/sticky
 	launched      bool
+	relaunch      bool    // sidebar closed to reopen at a new font size
+	font          float64 // sidebar font size (points)
 	dirty         chan struct{}
 }
 
@@ -83,6 +85,7 @@ func New(cfg config.Config, deps Deps) *Daemon {
 		agentCmd: map[string]string{},
 		gap:      -1,
 		dirty:    make(chan struct{}, 1),
+		font:     loadFont(cfg),
 	}
 }
 
@@ -258,11 +261,15 @@ func (d *Daemon) terms() map[string]*model.Term {
 	return out
 }
 
+func (d *Daemon) build() model.Snapshot {
+	return model.Snapshot{Workspaces: i3tree.Build(d.tree, d.infos, d.terms()), Condensed: d.condensed, Font: d.font}
+}
+
 func (d *Daemon) rebuild() {
 	if d.tree == nil {
 		return
 	}
-	d.snap = model.Snapshot{Workspaces: i3tree.Build(d.tree, d.infos, d.terms()), Condensed: d.condensed}
+	d.snap = d.build()
 	d.trackFocus() // may rebuild d.snap after marking an agent seen
 	d.pushHeaders()
 	d.syncUrgency()
@@ -270,7 +277,8 @@ func (d *Daemon) rebuild() {
 	snap := d.snap
 	snap.Now = d.d.Now()
 	b, _ := json.Marshal(snap)
-	cmp, _ := json.Marshal(model.Snapshot{Workspaces: snap.Workspaces, Condensed: snap.Condensed})
+	snap.Now = time.Time{}
+	cmp, _ := json.Marshal(snap)
 	if bytes.Equal(cmp, d.snapJSON) {
 		return
 	}
@@ -314,7 +322,7 @@ func (d *Daemon) trackFocus() {
 	pane := w.Term.Pane
 	if d.agents.Seen(pane) {
 		w.Term.Agent.Unseen = false
-		d.snap = model.Snapshot{Workspaces: i3tree.Build(d.tree, d.infos, d.terms()), Condensed: d.condensed}
+		d.snap = d.build()
 	}
 	if d.d.Notifier != nil {
 		d.d.Notifier.Close(pane)

@@ -1,8 +1,14 @@
 package daemon
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
+	"math"
+	"os"
+	"path/filepath"
+
+	"github.com/murrayb52/flock/internal/config"
 
 	"github.com/murrayb52/flock/internal/i3tree"
 	"go.i3wm.org/i3/v4"
@@ -26,11 +32,69 @@ func (d *Daemon) ensureSidebar() {
 	}
 	d.mu.Unlock()
 	if missing {
-		cmd := d.cfg.TerminalCommand(i3tree.SidebarClass, shellQuote(d.d.Bin)+" sidebar")
-		if err := d.d.Launch(cmd); err != nil {
-			log.Printf("launching sidebar: %v", err)
+		d.launchSidebar()
+	}
+}
+
+func (d *Daemon) launchSidebar() {
+	cmd := d.cfg.TerminalCommand(i3tree.SidebarClass, shellQuote(d.d.Bin)+" sidebar", d.font)
+	if err := d.d.Launch(cmd); err != nil {
+		log.Printf("launching sidebar: %v", err)
+	}
+}
+
+// Font sizes the sidebar's − + buttons step between.
+const (
+	minFont = 5.0
+	maxFont = 30.0
+)
+
+// settings are choices made from the sidebar itself, kept apart from the
+// user's config file so flock never rewrites it.
+type settings struct {
+	SidebarFont float64 `json:"sidebar_font_size,omitempty"`
+}
+
+func settingsPath(cfg config.Config) string { return filepath.Join(cfg.DataDir, "settings.json") }
+
+func loadFont(cfg config.Config) float64 {
+	var s settings
+	if b, err := os.ReadFile(settingsPath(cfg)); err == nil && json.Unmarshal(b, &s) == nil && s.SidebarFont > 0 {
+		return s.SidebarFont
+	}
+	return cfg.SidebarFont
+}
+
+// setFont changes the sidebar's font size by step (or to size when step is 0),
+// saves it and reopens the sidebar terminal, the one way that works for every
+// terminal. The left gap stays put meanwhile so windows do not jump.
+func (d *Daemon) setFont(size, step float64) error {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	if step != 0 {
+		size = d.font + step
+	}
+	size = math.Max(minFont, math.Min(maxFont, math.Round(size*2)/2))
+	if size == d.font {
+		return nil
+	}
+	d.font = size
+	if err := os.MkdirAll(d.cfg.DataDir, 0o700); err != nil {
+		return err
+	}
+	b, _ := json.Marshal(settings{SidebarFont: size})
+	if err := config.WriteFileAtomic(settingsPath(d.cfg), b, 0o600); err != nil {
+		return err
+	}
+	if n := d.sidebarNode(); n != nil && !d.relaunch {
+		d.relaunch = true
+		if err := d.d.WM.Command(fmt.Sprintf("[con_id=%d] kill", n.ID)); err != nil {
+			d.relaunch = false
+			return err
 		}
 	}
+	d.rebuild()
+	return nil
 }
 
 func abs(n int64) int64 {
@@ -45,6 +109,15 @@ func abs(n int64) int64 {
 // to whole cells, so the width i3 reports can differ from the one requested).
 func (d *Daemon) placeSidebar() {
 	n := d.sidebarNode()
+	if n == nil && d.relaunch {
+		// closed by setFont: reopen it at the new size, keeping the margin
+		d.sidebarReq = [2]int64{}
+		if !d.launched && d.d.Launch != nil {
+			d.launched = true
+			d.launchSidebar()
+		}
+		return
+	}
 	if n == nil {
 		// Not open (or closed by the user): no margin. It only reopens on
 		// daemon start or `flock sidebar show`.
@@ -55,6 +128,9 @@ func (d *Daemon) placeSidebar() {
 		return
 	}
 	d.launched = false // the launched window has arrived
+	if d.relaunch && n.ID != d.sidebarStyled {
+		d.relaunch = false
+	}
 	var area i3.Rect
 	var output string
 	for _, ws := range d.infos {

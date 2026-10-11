@@ -60,16 +60,17 @@ func TestBadFileIsAnError(t *testing.T) {
 
 func TestTerminalCommand(t *testing.T) {
 	cases := map[string]string{
-		"alacritty":              "alacritty --class flock-sidebar,flock-sidebar -e flock sidebar",
-		"kitty":                  "kitty --class flock-sidebar -e flock sidebar",
-		"ghostty":                "ghostty --class=flock-sidebar -e flock sidebar",
-		"wezterm":                "wezterm start --class flock-sidebar -- flock sidebar",
-		"foot":                   "foot --app-id flock-sidebar flock sidebar",
-		"xterm":                  "xterm -class flock-sidebar -e flock sidebar",
+		"alacritty":              "alacritty --class flock-sidebar,flock-sidebar -o font.size=9.5 -e flock sidebar",
+		"kitty":                  "kitty --class flock-sidebar -o font_size=9.5 -e flock sidebar",
+		"ghostty":                "ghostty --class=flock-sidebar --font-size=9.5 -e flock sidebar",
+		"wezterm":                "wezterm --config font_size=9.5 start --class flock-sidebar -- flock sidebar",
+		"foot":                   "foot --app-id flock-sidebar --font=monospace:size=9.5 flock sidebar",
+		"xterm":                  "xterm -class flock-sidebar -fa monospace -fs 9.5 -e flock sidebar",
 		"st -c {class} -e {cmd}": "st -c flock-sidebar -e flock sidebar",
+		"st -c {class} -f mono:size={font} -e {cmd}": "st -c flock-sidebar -f mono:size=9.5 -e flock sidebar",
 	}
 	for term, want := range cases {
-		got := Config{Terminal: term}.TerminalCommand("flock-sidebar", "flock sidebar")
+		got := Config{Terminal: term}.TerminalCommand("flock-sidebar", "flock sidebar", 9.5)
 		if got != want {
 			t.Errorf("%s: got %q want %q", term, got, want)
 		}

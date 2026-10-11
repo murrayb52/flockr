@@ -97,6 +97,7 @@ func (w Workspace) Windows() []Window {
 type Snapshot struct {
 	Workspaces []Workspace `json:"workspaces"`
 	Condensed  bool        `json:"condensed"`
+	Font       float64     `json:"font,omitempty"` // sidebar font size (points)
 	Now        time.Time   `json:"now"`
 }
 

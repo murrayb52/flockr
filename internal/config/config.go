@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"syscall"
 
@@ -14,12 +15,14 @@ import (
 
 type Config struct {
 	// Terminal used to open the sidebar: a known name (alacritty, kitty, ghostty,
-	// wezterm, foot, xterm) or a template containing {class} and {cmd}.
-	Terminal      string `toml:"terminal"`
-	SidebarWidth  int    `toml:"sidebar_width"` // pixels, expanded
-	RailWidth     int    `toml:"rail_width"`    // pixels, condensed
-	Notifications bool   `toml:"notifications"`
-	Shell         string `toml:"shell"` // shell started by `flock term`; defaults to $SHELL
+	// wezterm, foot, xterm) or a template containing {class} and {cmd}, and
+	// optionally {font} for the font size.
+	Terminal      string  `toml:"terminal"`
+	SidebarWidth  int     `toml:"sidebar_width"`     // pixels, expanded
+	RailWidth     int     `toml:"rail_width"`        // pixels, condensed
+	SidebarFont   float64 `toml:"sidebar_font_size"` // points; the sidebar's − + buttons override it
+	Notifications bool    `toml:"notifications"`
+	Shell         string  `toml:"shell"` // shell started by `flock term`; defaults to $SHELL
 	// Key names shown in terminal headers; match them to your i3 bindings.
 	LabelKey string `toml:"label_key"`
 	NotesKey string `toml:"notes_key"`
@@ -47,6 +50,7 @@ func Load() (Config, error) {
 		Terminal:      detectTerminal(),
 		SidebarWidth:  280,
 		RailWidth:     64,
+		SidebarFont:   11,
 		Notifications: true,
 		Shell:         os.Getenv("SHELL"),
 		LabelKey:      "Alt+/",
@@ -127,12 +131,12 @@ func WriteFileAtomic(path string, data []byte, perm os.FileMode) error {
 }
 
 var templates = map[string]string{
-	"alacritty": "alacritty --class {class},{class} -e {cmd}",
-	"kitty":     "kitty --class {class} -e {cmd}",
-	"ghostty":   "ghostty --class={class} -e {cmd}",
-	"wezterm":   "wezterm start --class {class} -- {cmd}",
-	"foot":      "foot --app-id {class} {cmd}",
-	"xterm":     "xterm -class {class} -e {cmd}",
+	"alacritty": "alacritty --class {class},{class} -o font.size={font} -e {cmd}",
+	"kitty":     "kitty --class {class} -o font_size={font} -e {cmd}",
+	"ghostty":   "ghostty --class={class} --font-size={font} -e {cmd}",
+	"wezterm":   "wezterm --config font_size={font} start --class {class} -- {cmd}",
+	"foot":      "foot --app-id {class} --font=monospace:size={font} {cmd}",
+	"xterm":     "xterm -class {class} -fa monospace -fs {font} -e {cmd}",
 }
 
 func detectTerminal() string {
@@ -145,11 +149,12 @@ func detectTerminal() string {
 }
 
 // TerminalCommand returns a shell command that opens the configured terminal
-// with the given WM class running cmd.
-func (c Config) TerminalCommand(class, cmd string) string {
+// with the given WM class and font size (points) running cmd.
+func (c Config) TerminalCommand(class, cmd string, font float64) string {
 	tpl, ok := templates[c.Terminal]
 	if !ok {
 		tpl = c.Terminal
 	}
-	return strings.NewReplacer("{class}", class, "{cmd}", cmd).Replace(tpl)
+	size := strconv.FormatFloat(font, 'f', -1, 64)
+	return strings.NewReplacer("{class}", class, "{cmd}", cmd, "{font}", size).Replace(tpl)
 }
