@@ -6,8 +6,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/murrayb52/flock/internal/model"
-	"github.com/murrayb52/flock/internal/ui"
+	"github.com/murrayb52/flockr/internal/model"
+	"github.com/murrayb52/flockr/internal/ui"
 )
 
 type Style int

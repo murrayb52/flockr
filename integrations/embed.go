@@ -3,5 +3,5 @@ package integrations
 
 import _ "embed"
 
-//go:embed pi/flock.ts
+//go:embed pi/flockr.ts
 var PiExtension []byte

@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/murrayb52/flock/internal/model"
+	"github.com/murrayb52/flockr/internal/model"
 	"go.i3wm.org/i3/v4"
 )
 
@@ -56,7 +56,7 @@ func names(g model.Group) []string {
 }
 
 func TestSplitOfTwoStacks(t *testing.T) {
-	api, mob, sh := win("Alacritty", "claude [flock:a1]"), win("Alacritty", "pi [flock:a2]"), win("Alacritty", "zsh [flock:a3]")
+	api, mob, sh := win("Alacritty", "claude [flockr:a1]"), win("Alacritty", "pi [flockr:a2]"), win("Alacritty", "zsh [flockr:a3]")
 	ff, code := win("firefox", "Bookshelf — Mozilla Firefox"), win("Code", "x - Visual Studio Code")
 	mob.Focused = true
 	left := focusFirst(con(i3.Stacked, api, mob, sh), mob)
@@ -95,14 +95,14 @@ func TestSplitOfTwoStacks(t *testing.T) {
 }
 
 func TestWorkspaceThatIsItselfAStack(t *testing.T) {
-	a, b := win("Alacritty", "x [flock:z]"), win("tidal-hifi", "Tidal")
+	a, b := win("Alacritty", "x [flockr:z]"), win("tidal-hifi", "Tidal")
 	w := ws(3, "3:Life admin", i3.Stacked, a, b)
 	got := Build(root(w), []i3.Workspace{{Num: 3, Name: "3:Life admin"}}, nil)[0]
 	if len(got.Groups) != 1 || got.Groups[0].Label != "stack of 2" || got.Groups[0].Windows[1].App != "music" {
 		t.Fatalf("got %+v", got.Groups)
 	}
 	if got.Groups[0].Windows[0].Term != nil {
-		t.Error("unknown flock session must not invent a term")
+		t.Error("unknown flockr session must not invent a term")
 	}
 	if got.Visible {
 		t.Error("visibility comes from GET_WORKSPACES")
@@ -143,7 +143,7 @@ func TestFloatingAndSidebarAndEmpty(t *testing.T) {
 	a := win("Alacritty", "a")
 	w := ws(5, "5", i3.SplitH, a)
 	fl := win("Pavucontrol", "Volume")
-	side := win("flock-sidebar", "sidebar")
+	side := win("flockr-sidebar", "sidebar")
 	w.FloatingNodes = []*i3.Node{{Type: i3.FloatingCon, Nodes: []*i3.Node{fl}}, {Type: i3.FloatingCon, Nodes: []*i3.Node{side}}}
 	empty := ws(6, "6:Empty", i3.SplitH)
 	got := Build(root(w, empty), []i3.Workspace{{Num: 5, Name: "5"}, {Num: 6, Name: "6:Empty"}}, nil)
@@ -167,7 +167,7 @@ func TestAppKeys(t *testing.T) {
 }
 
 func TestSessionFromTitle(t *testing.T) {
-	cases := map[string]string{"claude — api [flock:f3a9]": "f3a9", "[flock:x]": "x", "zsh": "", "[flock:]": "", "a [flock:b": ""}
+	cases := map[string]string{"claude — api [flockr:f3a9]": "f3a9", "[flockr:x]": "x", "zsh": "", "[flockr:]": "", "a [flockr:b": ""}
 	for title, want := range cases {
 		if got := SessionFromTitle(title); got != want {
 			t.Errorf("%q → %q want %q", title, got, want)

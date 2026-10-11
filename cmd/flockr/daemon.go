@@ -8,16 +8,16 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/murrayb52/flock/internal/config"
-	"github.com/murrayb52/flock/internal/daemon"
-	"github.com/murrayb52/flock/internal/notify"
-	"github.com/murrayb52/flock/internal/tmux"
-	"github.com/murrayb52/flock/internal/x11"
+	"github.com/murrayb52/flockr/internal/config"
+	"github.com/murrayb52/flockr/internal/daemon"
+	"github.com/murrayb52/flockr/internal/notify"
+	"github.com/murrayb52/flockr/internal/tmux"
+	"github.com/murrayb52/flockr/internal/x11"
 )
 
 func runDaemon(cfg config.Config) error {
 	log.SetFlags(log.Ltime)
-	log.SetPrefix("flock: ")
+	log.SetPrefix("flockr: ")
 	l, err := daemon.Listen(cfg.Socket)
 	if err != nil {
 		return err

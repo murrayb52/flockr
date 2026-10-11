@@ -5,11 +5,11 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/murrayb52/flock/internal/config"
+	"github.com/murrayb52/flockr/internal/config"
 )
 
 // settings are choices made from the sidebar's menu, kept apart from the
-// user's config file so flock never rewrites it.
+// user's config file so flockr never rewrites it.
 type settings struct {
 	SidebarFont   float64 `json:"sidebar_font_size,omitempty"`
 	Notifications *bool   `json:"notifications,omitempty"`

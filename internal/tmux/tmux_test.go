@@ -9,13 +9,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/murrayb52/flock/internal/model"
+	"github.com/murrayb52/flockr/internal/model"
 )
 
 func TestConfigNeverBindsKeys(t *testing.T) {
-	c := Config("/home/u/.config/flock/tmux.conf")
+	c := Config("/home/u/.config/flockr/tmux.conf")
 	for _, want := range []string{"set -g prefix None", "unbind-key -T prefix -a", "destroy-unattached on",
-		"[flock:#{session_name}]", "status-position top", "source-file -q /home/u/.config/flock/tmux.conf"} {
+		"[flockr:#{session_name}]", "status-position top", "source-file -q /home/u/.config/flockr/tmux.conf"} {
 		if !strings.Contains(c, want) {
 			t.Errorf("config lacks %q", want)
 		}
@@ -62,7 +62,7 @@ func TestRealServer(t *testing.T) {
 	if _, err := exec.LookPath("tmux"); err != nil {
 		t.Skip("tmux not installed")
 	}
-	sock := fmt.Sprintf("flocktest%d", os.Getpid())
+	sock := fmt.Sprintf("flockrtest%d", os.Getpid())
 	c := Client{Socket: sock}
 	defer c.cmd("kill-server").Run()
 	conf := filepath.Join(t.TempDir(), "tmux.conf")
@@ -71,7 +71,7 @@ func TestRealServer(t *testing.T) {
 	if err := c.cmd("-f", conf, "new-session", "-d", "-s", "t1", "-c", "/tmp", "sh").Run(); err != nil {
 		t.Fatal(err)
 	}
-	if err := c.Set("t1", map[string]string{"@flock_label": "hello #1", "@flock_h1": "x"}); err != nil {
+	if err := c.Set("t1", map[string]string{"@flockr_label": "hello #1", "@flockr_h1": "x"}); err != nil {
 		t.Fatal(err)
 	}
 	panes, err := c.ListPanes()

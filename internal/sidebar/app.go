@@ -7,8 +7,8 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/murrayb52/flock/internal/model"
-	"github.com/murrayb52/flock/internal/protocol"
+	"github.com/murrayb52/flockr/internal/model"
+	"github.com/murrayb52/flockr/internal/protocol"
 )
 
 type (
@@ -101,7 +101,7 @@ func (a *app) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (a *app) View() string {
 	if a.snap == nil {
 		a.lines = nil
-		return "\n " + stEmpty.Render("waiting for the flock daemon…")
+		return "\n " + stEmpty.Render("waiting for the flockr daemon…")
 	}
 	a.frame.Now = time.Now()
 	a.lines = Render(*a.snap, a.frame)

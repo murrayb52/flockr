@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/charmbracelet/x/ansi"
-	"github.com/murrayb52/flock/internal/model"
+	"github.com/murrayb52/flockr/internal/model"
 )
 
 var now = time.Date(2026, 10, 11, 12, 0, 0, 0, time.UTC)

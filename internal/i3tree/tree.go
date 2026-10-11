@@ -1,21 +1,21 @@
 // Package i3tree turns i3's layout tree into the workspace/group/window view the
-// sidebar shows, and plans the i3 commands for flock's window-moving helpers.
+// sidebar shows, and plans the i3 commands for flockr's window-moving helpers.
 package i3tree
 
 import (
 	"fmt"
 	"strings"
 
-	"github.com/murrayb52/flock/internal/model"
+	"github.com/murrayb52/flockr/internal/model"
 	"go.i3wm.org/i3/v4"
 )
 
-// SidebarClass is the WM class of flock's own sidebar window; it is never listed.
-const SidebarClass = "flock-sidebar"
+// SidebarClass is the WM class of flockr's own sidebar window; it is never listed.
+const SidebarClass = "flockr-sidebar"
 
 // Build lists the real workspaces (scratchpad excluded) in tree order.
 // infos supplies focus/visibility/urgency from GET_WORKSPACES; terms maps a
-// flock tmux session id (found in the window title) to its terminal.
+// flockr tmux session id (found in the window title) to its terminal.
 func Build(root *i3.Node, infos []i3.Workspace, terms map[string]*model.Term) []model.Workspace {
 	byName := map[string]i3.Workspace{}
 	for _, w := range infos {
@@ -216,13 +216,13 @@ func leadingNum(name string) int64 {
 	return n
 }
 
-// SessionFromTitle extracts the flock session id from a "… [flock:<id>]" title.
+// SessionFromTitle extracts the flockr session id from a "… [flockr:<id>]" title.
 func SessionFromTitle(title string) string {
-	i := strings.LastIndex(title, "[flock:")
+	i := strings.LastIndex(title, "[flockr:")
 	if i < 0 || !strings.HasSuffix(title, "]") {
 		return ""
 	}
-	return title[i+len("[flock:") : len(title)-1]
+	return title[i+len("[flockr:") : len(title)-1]
 }
 
 var appKeys = map[string]string{

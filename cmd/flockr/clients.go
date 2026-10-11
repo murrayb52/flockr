@@ -5,14 +5,14 @@ import (
 	"os"
 	"time"
 
-	"github.com/murrayb52/flock/internal/bar"
-	"github.com/murrayb52/flock/internal/config"
-	"github.com/murrayb52/flock/internal/install"
-	"github.com/murrayb52/flock/internal/model"
-	"github.com/murrayb52/flock/internal/notesui"
-	"github.com/murrayb52/flock/internal/protocol"
-	"github.com/murrayb52/flock/internal/sidebar"
-	"github.com/murrayb52/flock/internal/ui"
+	"github.com/murrayb52/flockr/internal/bar"
+	"github.com/murrayb52/flockr/internal/config"
+	"github.com/murrayb52/flockr/internal/install"
+	"github.com/murrayb52/flockr/internal/model"
+	"github.com/murrayb52/flockr/internal/notesui"
+	"github.com/murrayb52/flockr/internal/protocol"
+	"github.com/murrayb52/flockr/internal/sidebar"
+	"github.com/murrayb52/flockr/internal/ui"
 )
 
 func runSidebar(cfg config.Config, menu bool) error { return sidebar.Run(cfg.Socket, menu) }
@@ -91,7 +91,7 @@ func runStatus(cfg config.Config) error {
 
 func runInstall(add bool, args []string) error {
 	if len(args) != 1 {
-		return fmt.Errorf("usage: flock install|uninstall claude|pi|all")
+		return fmt.Errorf("usage: flockr install|uninstall claude|pi|all")
 	}
 	what := args[0]
 	verb := map[bool]string{true: "installed", false: "removed"}[add]

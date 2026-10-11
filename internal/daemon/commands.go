@@ -6,20 +6,20 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/murrayb52/flock/internal/i3tree"
-	"github.com/murrayb52/flock/internal/model"
-	"github.com/murrayb52/flock/internal/protocol"
-	"github.com/murrayb52/flock/internal/tmux"
-	"github.com/murrayb52/flock/internal/ui"
+	"github.com/murrayb52/flockr/internal/i3tree"
+	"github.com/murrayb52/flockr/internal/model"
+	"github.com/murrayb52/flockr/internal/protocol"
+	"github.com/murrayb52/flockr/internal/tmux"
+	"github.com/murrayb52/flockr/internal/ui"
 	"go.i3wm.org/i3/v4"
 )
 
 const notesHeight = 16 // most lines the notes drawer takes
 
 // hintKey is the notification that reports why a key binding did nothing.
-const hintKey = "flock-hint"
+const hintKey = "flockr-hint"
 
-// Command runs one of the commands i3 bindings call (`flock <name> …`). Key
+// Command runs one of the commands i3 bindings call (`flockr <name> …`). Key
 // bindings have nowhere to print, so a failure of one is also shown as a
 // desktop notification.
 func (d *Daemon) Command(args []string) protocol.Response {
@@ -27,7 +27,7 @@ func (d *Daemon) Command(args []string) protocol.Response {
 	if !r.OK && len(args) > 0 && d.d.Notifier != nil {
 		switch args[0] {
 		case "label", "notes", "slot", "next":
-			if err := d.d.Notifier.Notify(hintKey, "flock", r.Error, false); err != nil {
+			if err := d.d.Notifier.Notify(hintKey, "flockr", r.Error, false); err != nil {
 				log.Printf("notify: %v", err)
 			}
 		}
@@ -139,7 +139,7 @@ func (d *Daemon) next() protocol.Response {
 	return ok("")
 }
 
-// focusedTerm returns the focused window if it is a flock terminal.
+// focusedTerm returns the focused window if it is a flockr terminal.
 func (d *Daemon) focusedTerm() (model.Window, bool) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
@@ -150,7 +150,7 @@ func (d *Daemon) focusedTerm() (model.Window, bool) {
 func (d *Daemon) label() protocol.Response {
 	w, found := d.focusedTerm()
 	if !found {
-		return fail("labels work in flock terminals (start one with `flock term`)")
+		return fail("labels work in flockr terminals (start one with `flockr term`)")
 	}
 	current := w.Term.Label
 	if a := w.Term.Agent; a != nil {
@@ -158,7 +158,7 @@ func (d *Daemon) label() protocol.Response {
 	}
 	// The answer goes straight into a tmux option the daemon consumes: no shell
 	// ever sees the text. The "=" prefix lets an empty answer clear the label.
-	tpl := fmt.Sprintf(`set-option -t %s @flock_label_input "=%%%%%%"`, w.Term.Session)
+	tpl := fmt.Sprintf(`set-option -t %s @flockr_label_input "=%%%%%%"`, w.Term.Session)
 	if err := d.d.Mux.Prompt(w.Term.Session, "label › ", current, tpl); err != nil {
 		return fail(err.Error())
 	}

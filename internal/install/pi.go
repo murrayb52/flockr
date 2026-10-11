@@ -4,7 +4,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/murrayb52/flock/integrations"
+	"github.com/murrayb52/flockr/integrations"
 )
 
 // PiPath is where Pi loads personal extensions from.
@@ -14,10 +14,10 @@ func PiPath() string {
 		home, _ := os.UserHomeDir()
 		dir = filepath.Join(home, ".pi", "agent")
 	}
-	return filepath.Join(dir, "extensions", "flock.ts")
+	return filepath.Join(dir, "extensions", "flockr.ts")
 }
 
-// Pi writes (or removes) the flock extension for Pi.
+// Pi writes (or removes) the flockr extension for Pi.
 func Pi(install bool) (string, error) {
 	p := PiPath()
 	if !install {

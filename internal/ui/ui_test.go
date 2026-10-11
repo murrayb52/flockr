@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/murrayb52/flock/internal/model"
+	"github.com/murrayb52/flockr/internal/model"
 )
 
 func term(label, cwd, cmd string, a *model.Agent) model.Window {

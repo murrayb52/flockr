@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/murrayb52/flock/internal/model"
+	"github.com/murrayb52/flockr/internal/model"
 )
 
 type Record struct {

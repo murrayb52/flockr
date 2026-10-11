@@ -1,4 +1,4 @@
-// Package config loads flock's optional config file and resolves its paths.
+// Package config loads flockr's optional config file and resolves its paths.
 package config
 
 import (
@@ -14,7 +14,7 @@ import (
 )
 
 type Config struct {
-	// Terminal that `flock term` opens when started from a key binding: a
+	// Terminal that `flockr term` opens when started from a key binding: a
 	// known name, or a template containing {cmd}. Defaults to the system's
 	// default terminal ($TERMINAL, then x-terminal-emulator).
 	Terminal string `toml:"terminal"`
@@ -26,7 +26,7 @@ type Config struct {
 	RailWidth       int     `toml:"rail_width"`        // pixels, condensed
 	SidebarFont     float64 `toml:"sidebar_font_size"` // points; the sidebar's − + buttons override it
 	Notifications   bool    `toml:"notifications"`
-	Shell           string  `toml:"shell"` // shell started by `flock term`; defaults to $SHELL
+	Shell           string  `toml:"shell"` // shell started by `flockr term`; defaults to $SHELL
 	// Key names shown in terminal headers; match them to your i3 bindings.
 	LabelKey string `toml:"label_key"`
 	NotesKey string `toml:"notes_key"`
@@ -46,7 +46,7 @@ func xdg(env, fallback string) string {
 
 // Path of the config file (it does not have to exist).
 func Path() string {
-	return filepath.Join(xdg("XDG_CONFIG_HOME", ".config"), "flock", "config.toml")
+	return filepath.Join(xdg("XDG_CONFIG_HOME", ".config"), "flockr", "config.toml")
 }
 
 func Load() (Config, error) {
@@ -60,7 +60,7 @@ func Load() (Config, error) {
 		Shell:           os.Getenv("SHELL"),
 		LabelKey:        "Alt+/",
 		NotesKey:        "Alt+.",
-		TmuxSocket:      "flock",
+		TmuxSocket:      "flockr",
 	}
 	if c.Shell == "" {
 		c.Shell = "/bin/sh"
@@ -70,18 +70,18 @@ func Load() (Config, error) {
 			return c, fmt.Errorf("%s: %w", Path(), err)
 		}
 	}
-	c.Socket = filepath.Join(RuntimeDir(), "flock.sock")
-	c.DataDir = filepath.Join(xdg("XDG_DATA_HOME", ".local/share"), "flock")
+	c.Socket = filepath.Join(RuntimeDir(), "flockr.sock")
+	c.DataDir = filepath.Join(xdg("XDG_DATA_HOME", ".local/share"), "flockr")
 	return c, nil
 }
 
-// RuntimeDir is flock's private runtime directory: $XDG_RUNTIME_DIR/flock, or
-// /tmp/flock-<uid> when that is unset (never a directory shared between users).
+// RuntimeDir is flockr's private runtime directory: $XDG_RUNTIME_DIR/flockr, or
+// /tmp/flockr-<uid> when that is unset (never a directory shared between users).
 func RuntimeDir() string {
 	if r := os.Getenv("XDG_RUNTIME_DIR"); r != "" {
-		return filepath.Join(r, "flock")
+		return filepath.Join(r, "flockr")
 	}
-	return filepath.Join(os.TempDir(), fmt.Sprintf("flock-%d", os.Getuid()))
+	return filepath.Join(os.TempDir(), fmt.Sprintf("flockr-%d", os.Getuid()))
 }
 
 // PrivateDir creates dir (0700) and refuses to use it unless it is a real
@@ -179,7 +179,7 @@ func defaultTerminal() string {
 	return "xterm"
 }
 
-// OpenCommand returns a shell command that opens the terminal for flock
+// OpenCommand returns a shell command that opens the terminal for flockr
 // terminals running cmd.
 func (c Config) OpenCommand(cmd string) string {
 	tpl := c.Terminal

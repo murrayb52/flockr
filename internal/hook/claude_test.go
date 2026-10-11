@@ -3,7 +3,7 @@ package hook
 import (
 	"testing"
 
-	"github.com/murrayb52/flock/internal/agents"
+	"github.com/murrayb52/flockr/internal/agents"
 )
 
 // payloads captured from Claude Code 2.1.296 (paths shortened)

@@ -11,8 +11,8 @@ import (
 	"syscall"
 
 	"github.com/mattn/go-isatty"
-	"github.com/murrayb52/flock/internal/config"
-	"github.com/murrayb52/flock/internal/tmux"
+	"github.com/murrayb52/flockr/internal/config"
+	"github.com/murrayb52/flockr/internal/tmux"
 )
 
 func tmuxConfig() string { return tmux.Config(userTmuxConf()) }
@@ -26,12 +26,12 @@ func writeTmuxConf(cfg config.Config) (string, error) {
 	return path, config.WriteFileAtomic(path, []byte(tmuxConfig()), 0o600)
 }
 
-func inFlockTmux(cfg config.Config) bool {
+func inFlockrTmux(cfg config.Config) bool {
 	sock := strings.SplitN(os.Getenv("TMUX"), ",", 2)[0]
 	return sock != "" && filepath.Base(sock) == cfg.TmuxSocket
 }
 
-// runTerm replaces this process with a new session on flock's tmux server.
+// runTerm replaces this process with a new session on flockr's tmux server.
 // Started without a terminal (from an i3 binding), it first opens the
 // configured terminal running itself, by absolute path so that terminals
 // started with a different PATH (gnome-terminal's server) still find it.
@@ -39,7 +39,7 @@ func runTerm(cfg config.Config, args []string) error {
 	if len(args) > 0 && args[0] == "--" {
 		args = args[1:]
 	}
-	if !isatty.IsTerminal(os.Stdin.Fd()) && !inFlockTmux(cfg) {
+	if !isatty.IsTerminal(os.Stdin.Fd()) && !inFlockrTmux(cfg) {
 		cmd := shellQuote(binPath()) + " term"
 		if len(args) > 0 {
 			cmd += " --"
@@ -51,9 +51,9 @@ func runTerm(cfg config.Config, args []string) error {
 	}
 	tmuxBin, err := exec.LookPath("tmux")
 	if err != nil {
-		return fmt.Errorf("tmux is required for flock terminals: %w", err)
+		return fmt.Errorf("tmux is required for flockr terminals: %w", err)
 	}
-	if inFlockTmux(cfg) { // already inside one: just run the command/shell
+	if inFlockrTmux(cfg) { // already inside one: just run the command/shell
 		if len(args) == 0 {
 			args = []string{cfg.Shell}
 		}
@@ -72,13 +72,13 @@ func runTerm(cfg config.Config, args []string) error {
 	session := hex.EncodeToString(b)
 	cwd, _ := os.Getwd()
 	argv := []string{"tmux", "-L", cfg.TmuxSocket, "-f", conf, "new-session", "-s", session, "-c", cwd,
-		"-e", "FLOCK_SOCKET=" + cfg.Socket, "-e", "FLOCK_TMUX=" + cfg.TmuxSocket}
+		"-e", "FLOCKR_SOCKET=" + cfg.Socket, "-e", "FLOCKR_TMUX=" + cfg.TmuxSocket}
 	argv = append(argv, args...)
 	env := os.Environ()
 	if os.Getenv("SHELL") == "" {
 		env = append(env, "SHELL="+cfg.Shell)
 	}
-	// a server started by an older flock keeps its old config: reload it
+	// a server started by an older flockr keeps its old config: reload it
 	(tmux.Client{Socket: cfg.TmuxSocket}).Source(conf)
 	return syscall.Exec(tmuxBin, argv, withoutTmux(env))
 }

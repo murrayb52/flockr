@@ -7,12 +7,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/murrayb52/flock/internal/agents"
-	"github.com/murrayb52/flock/internal/config"
-	"github.com/murrayb52/flock/internal/model"
-	"github.com/murrayb52/flock/internal/protocol"
-	"github.com/murrayb52/flock/internal/sessions"
-	"github.com/murrayb52/flock/internal/tmux"
+	"github.com/murrayb52/flockr/internal/agents"
+	"github.com/murrayb52/flockr/internal/config"
+	"github.com/murrayb52/flockr/internal/model"
+	"github.com/murrayb52/flockr/internal/protocol"
+	"github.com/murrayb52/flockr/internal/sessions"
+	"github.com/murrayb52/flockr/internal/tmux"
 	"go.i3wm.org/i3/v4"
 )
 
@@ -109,18 +109,18 @@ type fakeUrg map[int64]bool
 
 func (f fakeUrg) Set(x int64, on bool) error { f[x] = on; return nil }
 
-// ---- fixture: workspace 1 "Bookshelf" with a stack of two flock terminals + firefox ----
+// ---- fixture: workspace 1 "Bookshelf" with a stack of two flockr terminals + firefox ----
 
 func fixture(t *testing.T) (*Daemon, *fakeWM, *fakeMux, *fakeNotifier, fakeUrg) {
 	t.Helper()
-	api := &i3.Node{ID: 11, Window: 1100, Name: "claude [flock:s1]", WindowProperties: i3.WindowProperties{Class: "Alacritty"}}
-	mob := &i3.Node{ID: 12, Window: 1200, Name: "pi [flock:s2]", WindowProperties: i3.WindowProperties{Class: "Alacritty"}}
+	api := &i3.Node{ID: 11, Window: 1100, Name: "claude [flockr:s1]", WindowProperties: i3.WindowProperties{Class: "Alacritty"}}
+	mob := &i3.Node{ID: 12, Window: 1200, Name: "pi [flockr:s2]", WindowProperties: i3.WindowProperties{Class: "Alacritty"}}
 	ff := &i3.Node{ID: 13, Window: 1300, Name: "x — Mozilla Firefox", WindowProperties: i3.WindowProperties{Class: "firefox"}, Focused: true}
 	stack := &i3.Node{ID: 10, Layout: i3.Stacked, Nodes: []*i3.Node{api, mob}, Focus: []i3.NodeID{11, 12}}
 	ws1 := &i3.Node{ID: 2, Type: i3.WorkspaceNode, Name: "1:Bookshelf", Layout: i3.SplitH, Nodes: []*i3.Node{stack, ff}, Focus: []i3.NodeID{13, 10}}
 	root := &i3.Node{Type: i3.Root, Nodes: []*i3.Node{{Type: i3.OutputNode, Name: "eDP-1", Rect: i3.Rect{X: 0, Y: 0, Width: 1920, Height: 1080},
 		Nodes: []*i3.Node{{Name: "content", Nodes: []*i3.Node{ws1}}}}}}
-	// i3 reports the workspace rect inside the gap flock adds (x=280 here)
+	// i3 reports the workspace rect inside the gap flockr adds (x=280 here)
 	wm := &fakeWM{root: root, infos: []i3.Workspace{{Num: 1, Name: "1:Bookshelf", Focused: true, Visible: true, Output: "eDP-1",
 		Rect: i3.Rect{X: 280, Y: 28, Width: 1640, Height: 1052}}}}
 	mux := &fakeMux{panes: []tmux.Pane{
@@ -130,7 +130,7 @@ func fixture(t *testing.T) (*Daemon, *fakeWM, *fakeMux, *fakeNotifier, fakeUrg) 
 	n := &fakeNotifier{}
 	u := fakeUrg{}
 	cfg := config.Config{DataDir: t.TempDir(), Notifications: true, SidebarWidth: 280, RailWidth: 64, SidebarFont: 11, LabelKey: "Alt+/", NotesKey: "Alt+."}
-	d := New(cfg, Deps{WM: wm, Mux: mux, Notifier: n, Urgency: u, Bin: "/usr/bin/flock",
+	d := New(cfg, Deps{WM: wm, Mux: mux, Notifier: n, Urgency: u, Bin: "/usr/bin/flockr",
 		Now: func() time.Time { return time.Date(2026, 10, 11, 12, 0, 0, 0, time.UTC) }})
 	d.Refresh()
 	return d, wm, mux, n, u
@@ -172,14 +172,14 @@ func TestInputNotifiesAndRaisesUrgency(t *testing.T) {
 	if !u[1100] {
 		t.Error("urgency hint should be set on the agent's window")
 	}
-	if h := mux.opt("s1", "@flock_h1"); !strings.Contains(h, "needs input") {
+	if h := mux.opt("s1", "@flockr_h1"); !strings.Contains(h, "needs input") {
 		t.Errorf("header = %q", h)
 	}
-	if mux.opt("s1", "status") != "2" || !strings.Contains(mux.opt("s1", "@flock_h2"), "notes [0/0]") {
-		t.Errorf("notes strip = %q", mux.opt("s1", "@flock_h2"))
+	if mux.opt("s1", "status") != "2" || !strings.Contains(mux.opt("s1", "@flockr_h2"), "notes [0/0]") {
+		t.Errorf("notes strip = %q", mux.opt("s1", "@flockr_h2"))
 	}
-	if mux.opt("s1", "@flock_title") != "add pagination" {
-		t.Errorf("title = %q", mux.opt("s1", "@flock_title"))
+	if mux.opt("s1", "@flockr_title") != "add pagination" {
+		t.Errorf("title = %q", mux.opt("s1", "@flockr_title"))
 	}
 }
 
@@ -245,7 +245,7 @@ func TestLabelPromptAnswerIsConsumed(t *testing.T) {
 	if d.store.Load("claude", "sess-9").Label != `reading-list "API" #1` {
 		t.Error("agent label must be saved with the session")
 	}
-	if mux.opt("s1", "@flock_label_input") != "" || mux.opt("s2", "@flock_label") != "dev server" {
+	if mux.opt("s1", "@flockr_label_input") != "" || mux.opt("s2", "@flockr_label") != "dev server" {
 		t.Errorf("tmux options: %+v", mux.sets)
 	}
 }
@@ -257,13 +257,13 @@ func TestLabelCommandUsesNoShell(t *testing.T) {
 	if r := d.Command([]string{"label"}); !r.OK {
 		t.Fatal(r.Error)
 	}
-	if len(mux.prompts) != 1 || !strings.Contains(mux.prompts[0], `set-option -t s1 @flock_label_input "=%%%"`) {
+	if len(mux.prompts) != 1 || !strings.Contains(mux.prompts[0], `set-option -t s1 @flockr_label_input "=%%%"`) {
 		t.Errorf("prompt = %v", mux.prompts)
 	}
 	wm.focus(13)
 	d.Refresh()
 	if r := d.Command([]string{"label"}); r.OK {
-		t.Error("labelling a non-flock window should fail politely")
+		t.Error("labelling a non-flockr window should fail politely")
 	}
 }
 
@@ -314,7 +314,7 @@ func TestAgentRunByAShellScriptIsKept(t *testing.T) {
 
 func TestSidebarDockedAndGapMatchesRealWidth(t *testing.T) {
 	d, wm, _, _, _ := fixture(t)
-	side := &i3.Node{ID: 99, Window: 9900, Name: "sidebar", WindowProperties: i3.WindowProperties{Class: "flock-sidebar"},
+	side := &i3.Node{ID: 99, Window: 9900, Name: "sidebar", WindowProperties: i3.WindowProperties{Class: "flockr-sidebar"},
 		Rect: i3.Rect{X: 500, Y: 500, Width: 300, Height: 300}}
 	wm.root.Nodes[0].Nodes[0].Nodes[0].FloatingNodes = []*i3.Node{{Type: i3.FloatingCon, Nodes: []*i3.Node{side}}}
 	d.Refresh()
@@ -332,7 +332,7 @@ func TestSidebarDockedAndGapMatchesRealWidth(t *testing.T) {
 	if got := wm.took("gaps left"); len(got) != 1 {
 		t.Fatalf("gap already right, nothing to do: %v", got)
 	}
-	wm.infos[0].Rect.X = 0 // something reset the gaps behind flock's back
+	wm.infos[0].Rect.X = 0 // something reset the gaps behind flockr's back
 	d.Refresh()
 	if got := wm.took("gaps left"); len(got) != 2 {
 		t.Fatalf("a reset gap must be restored: %v", got)
@@ -350,7 +350,7 @@ func TestSidebarDockedAndGapMatchesRealWidth(t *testing.T) {
 
 func TestSidebarHiddenBehindFullscreenIsLeftAlone(t *testing.T) {
 	d, wm, _, _, _ := fixture(t)
-	side := &i3.Node{ID: 99, Window: 9900, Name: "sidebar", WindowProperties: i3.WindowProperties{Class: "flock-sidebar"},
+	side := &i3.Node{ID: 99, Window: 9900, Name: "sidebar", WindowProperties: i3.WindowProperties{Class: "flockr-sidebar"},
 		Rect: i3.Rect{X: 597, Y: 295, Width: 800, Height: 600}} // stale: not drawn
 	wm.root.Nodes[0].Nodes[0].Nodes[0].FloatingNodes = []*i3.Node{{Type: i3.FloatingCon,
 		Rect: i3.Rect{X: 0, Y: 28, Width: 280, Height: 1052}, Nodes: []*i3.Node{side}}}
@@ -375,7 +375,7 @@ func TestSidebarFontReopensAtNewSizeKeepingGap(t *testing.T) {
 	var launched []string
 	d.d.Launch = func(c string) error { launched = append(launched, c); return nil }
 	d.cfg.SidebarTerminal = "alacritty"
-	side := &i3.Node{ID: 99, Window: 9900, Name: "sidebar", WindowProperties: i3.WindowProperties{Class: "flock-sidebar"},
+	side := &i3.Node{ID: 99, Window: 9900, Name: "sidebar", WindowProperties: i3.WindowProperties{Class: "flockr-sidebar"},
 		Rect: i3.Rect{X: 0, Y: 28, Width: 280, Height: 1052}}
 	floats := &wm.root.Nodes[0].Nodes[0].Nodes[0].FloatingNodes
 	*floats = []*i3.Node{{Type: i3.FloatingCon, Nodes: []*i3.Node{side}}}
@@ -453,7 +453,7 @@ func TestFailedKeyCommandsSayWhy(t *testing.T) {
 	if r := d.Command([]string{"label"}); r.OK {
 		t.Fatal("labelling firefox must fail")
 	}
-	if len(n.shown) != 1 || n.shown[0].key != hintKey || !strings.Contains(n.shown[0].body, "flock terminals") {
+	if len(n.shown) != 1 || n.shown[0].key != hintKey || !strings.Contains(n.shown[0].body, "flockr terminals") {
 		t.Errorf("hint = %+v", n.shown)
 	}
 	d.Command([]string{"jump", "x"}) // not a key binding: no notification

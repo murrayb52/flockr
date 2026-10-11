@@ -2,7 +2,7 @@
 <html lang="en-GB">
 <head>
 <meta charset="utf-8">
-<title>flock — mockup v7</title>
+<title>flockr — mockup v7</title>
 <style>
 :root{
   --bg:#2f343f; --active:#2D6A4F; --active2:#40916c; --text:#f3f4f5; --dim:#676E7D; --urgent:#E53935;
@@ -193,7 +193,7 @@ body.blinkoff .caret{visibility:hidden}
 <body>
 
 <div id="ctl">
-  <span class="brand">flock · mockup v7</span>
+  <span class="brand">flockr · mockup v7</span>
   <button id="t-rail">condensed sidebar</button>
   <button id="t-head" class="on">pinned label header</button>
   <button id="t-strips">slim stack strips (fallback)</button>
@@ -249,9 +249,9 @@ const PI = [
    steps:[['read','~/Downloads/statement-2026-09.csv','184 rows'],['bash','python categorise.py statement-2026-09.csv','184 categorised, 6 unsure'],['write','budget/2026-09.md','new file, 52 lines']],
    ask:'Six transactions look like annual subscriptions. Flag them for review? (y/n)',
    done:'September is categorised: groceries R6 240, transport R2 115, subscriptions R1 380.'},
-  {prompt:'write a pi extension that reports turn state to flock',
-   steps:[['read','~/.pi/agent/extensions/README.md','88 lines'],['write','extensions/flock.ts','new file, 37 lines'],['bash','pi --list-extensions','flock (local)']],
-   ask:'Report an Esc abort as idle too? (y/n)', done:'flock.ts now reports working / idle / question after every turn.'},
+  {prompt:'write a pi extension that reports turn state to flockr',
+   steps:[['read','~/.pi/agent/extensions/README.md','88 lines'],['write','extensions/flockr.ts','new file, 37 lines'],['bash','pi --list-extensions','flockr (local)']],
+   ask:'Report an Esc abort as idle too? (y/n)', done:'flockr.ts now reports working / idle / question after every turn.'},
 ];
 
 /* ---------- world: workspace → columns (side by side) → stacked windows ---------- */
@@ -262,7 +262,7 @@ function term(label, cwd, proc = 'zsh', shell = []) {
           activity:'', ti:Math.floor(Math.random()*4), tok:Math.floor(rand(6,30)),
           sid:null, notes:[], nsel:0, shellLabel:''};
 }
-const SESSIONS = [];                         // ended agent sessions: what flock keeps on disk, keyed by session id
+const SESSIONS = [];                         // ended agent sessions: what flockr keeps on disk, keyed by session id
 const newSid = () => Math.random().toString(16).slice(2, 8);
 const note = (text, done = false) => ({text, done});
 const app = (app, title) => ({id:++uid, app, title, label:''});
@@ -283,9 +283,9 @@ const WS = [
     col(app('web', 'Website — staging preview'))]},
   {n:3, name:'Life admin', dir:'~', fc:0, cols:[
     col(term('', '~/admin/budget'), app('web', 'Home insurance quotes'), app('music', 'Tidal — Now playing'))]},
-  {n:4, name:'flock', dir:'~/projects/flock', fc:0, cols:[
-    col(term('', '~/projects/flock')),
-    col(term('', '~/projects/flock', 'zsh', [prompt('~/projects/flock') + 'ls', 'docs  src  hooks  README.md']))]},
+  {n:4, name:'flockr', dir:'~/projects/flockr', fc:0, cols:[
+    col(term('', '~/projects/flockr')),
+    col(term('', '~/projects/flockr', 'zsh', [prompt('~/projects/flockr') + 'ls', 'docs  src  hooks  README.md']))]},
 ];
 const S = {mod:'Ctrl+Alt', speed:1, paused:false, t:0, frame:0, ws:1, toasts:[],
            rail:false, head:true, strips:false, labeling:null, notes:null, notesAt:0, nedit:false};

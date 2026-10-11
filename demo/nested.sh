@@ -1,17 +1,17 @@
 #!/bin/bash
-# nested.sh — run flock in a nested i3 (Xephyr) for testing and recording demos.
+# nested.sh — run flockr in a nested i3 (Xephyr) for testing and recording demos.
 # It has its own D-Bus session, dunst, polybar, tmux server and XDG dirs, so it
 # never touches the desktop you are running it from.
 #
-#   demo/nested.sh start    build flock and start the nested session
+#   demo/nested.sh start    build flockr and start the nested session
 #   demo/nested.sh env      print the environment for driving it (eval "$(…)")
 #   demo/nested.sh stop
 set -euo pipefail
 
 repo=$(cd "$(dirname "$0")/.." && pwd)
-work=${FLOCK_WORK:-/tmp/flock-nested}
-display=${FLOCK_DISPLAY:-:5}
-size=${FLOCK_SIZE:-1280x800}
+work=${FLOCKR_WORK:-/tmp/flockr-nested}
+display=${FLOCKR_DISPLAY:-:5}
+size=${FLOCKR_SIZE:-1280x800}
 
 env_vars() {
   cat <<EOF
@@ -20,27 +20,27 @@ export XDG_RUNTIME_DIR=$work/run XDG_DATA_HOME=$work/data XDG_CONFIG_HOME=$work/
 export I3SOCK=$work/run/i3.sock
 export PATH=$work/bin:\$PATH
 export WINIT_X11_SCALE_FACTOR=1
-unset TMUX TMUX_PANE FLOCK_SOCKET
+unset TMUX TMUX_PANE FLOCKR_SOCKET
 EOF
 }
 
 start() {
-  mkdir -p "$work"/{bin,run,data} "$work"/config/{flock,i3,polybar,alacritty,dunst}
+  mkdir -p "$work"/{bin,run,data} "$work"/config/{flockr,i3,polybar,alacritty,dunst}
   : >"$work/daemon.log"
   chmod 700 "$work/run"
-  (cd "$repo" && go build -o "$work/bin/flock" ./cmd/flock)
+  (cd "$repo" && go build -o "$work/bin/flockr" ./cmd/flockr)
   cp "$repo/demo/fakeagent" "$work/bin/"
   [[ -d $HOME/.config/alacritty ]] && cp -r "$HOME/.config/alacritty/." "$work/config/alacritty/" || true
   [[ -f $HOME/.config/dunst/dunstrc ]] && cp "$HOME/.config/dunst/dunstrc" "$work/config/dunst/" || true
-  printf 'terminal = "alacritty"\nsidebar_terminal = "alacritty"\n' > "$work/config/flock/config.toml"
+  printf 'terminal = "alacritty"\nsidebar_terminal = "alacritty"\n' > "$work/config/flockr/config.toml"
 
   # the example snippet, with the daemon's log captured
-  sed "s|exec_always --no-startup-id flock daemon|exec_always --no-startup-id flock daemon 2>>$work/daemon.log|" \
-    "$repo/examples/i3.conf" > "$work/config/i3/flock.conf"
+  sed "s|exec_always --no-startup-id flockr daemon|exec_always --no-startup-id flockr daemon 2>>$work/daemon.log|" \
+    "$repo/examples/i3.conf" > "$work/config/i3/flockr.conf"
   cat > "$work/config/i3/config" <<EOF
 set \$mod Mod4
 ipc-socket $work/run/i3.sock
-include $work/config/i3/flock.conf
+include $work/config/i3/flockr.conf
 for_window [class=".*"] border pixel 3
 bindsym \$mod+Up focus up
 bindsym \$mod+Down focus down
@@ -58,11 +58,11 @@ bindsym \$mod+Shift+q kill
 bindsym \$mod+1 workspace number "1:Bookshelf"
 bindsym \$mod+2 workspace number "2:Website"
 bindsym \$mod+3 workspace number "3:Life admin"
-bindsym \$mod+4 workspace number "4:flock"
+bindsym \$mod+4 workspace number "4:flockr"
 exec --no-startup-id i3-msg workspace number "1:Bookshelf"
 EOF
   cat > "$work/config/polybar/config.ini" <<'EOF'
-[bar/flock]
+[bar/flockr]
 width = 100%
 height = 26
 background = #1c1f26
@@ -70,15 +70,15 @@ foreground = #f3f4f5
 line-size = 2
 font-0 = monospace:size=10;2
 font-1 = DejaVu Sans:size=10;2
-modules-left = flock
+modules-left = flockr
 modules-right = date
 padding-right = 1
 wm-restack = i3
 override-redirect = false
 
-[module/flock]
+[module/flockr]
 type = custom/script
-exec = flock bar
+exec = flockr bar
 tail = true
 
 [module/date]
@@ -90,14 +90,14 @@ EOF
   echo $! >"$work/xephyr.pid"
   sleep 1
   ( eval "$(env_vars)"; setsid dbus-run-session -- sh -c \
-      "dunst >$work/dunst.log 2>&1 & (sleep 1; polybar -c $work/config/polybar/config.ini flock >$work/polybar.log 2>&1) & exec i3 -c $work/config/i3/config" \
+      "dunst >$work/dunst.log 2>&1 & (sleep 1; polybar -c $work/config/polybar/config.ini flockr >$work/polybar.log 2>&1) & exec i3 -c $work/config/i3/config" \
       >"$work/i3.log" 2>&1 & )
   for _ in $(seq 50); do [[ -S $work/run/i3.sock ]] && break; sleep 0.1; done
   echo "nested i3 on $display (logs in $work)"
 }
 
 stop() {
-  tmux -L flock kill-server 2>/dev/null || true
+  tmux -L flockr kill-server 2>/dev/null || true
   # by recorded pid: `pkill -f` would also match any shell whose command line
   # mentions the display
   [[ -f $work/xephyr.pid ]] && kill "$(cat "$work/xephyr.pid")" 2>/dev/null || true

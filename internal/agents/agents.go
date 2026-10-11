@@ -6,7 +6,7 @@ import (
 	"sort"
 	"time"
 
-	"github.com/murrayb52/flock/internal/model"
+	"github.com/murrayb52/flockr/internal/model"
 )
 
 // Event is the harness-neutral event the hook adapters and the Pi extension send.

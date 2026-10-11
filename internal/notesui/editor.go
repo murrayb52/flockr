@@ -5,7 +5,7 @@ package notesui
 import (
 	"strings"
 
-	"github.com/murrayb52/flock/internal/model"
+	"github.com/murrayb52/flockr/internal/model"
 )
 
 // Editor is the key model. Rows are the notes plus a final "new note" row.

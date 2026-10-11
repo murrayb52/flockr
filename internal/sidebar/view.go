@@ -1,4 +1,4 @@
-// Package sidebar is the TUI shown in the flock-sidebar terminal window: the
+// Package sidebar is the TUI shown in the flockr-sidebar terminal window: the
 // focused workspace's windows grouped as i3 lays them out, or an icon rail
 // when condensed.
 package sidebar
@@ -11,8 +11,8 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/mattn/go-runewidth"
-	"github.com/murrayb52/flock/internal/model"
-	"github.com/murrayb52/flock/internal/ui"
+	"github.com/murrayb52/flockr/internal/model"
+	"github.com/murrayb52/flockr/internal/ui"
 )
 
 // RailColumns: at or below this width the sidebar draws the icon rail.

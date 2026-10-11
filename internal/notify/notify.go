@@ -1,5 +1,5 @@
 // Package notify sends desktop notifications over D-Bus (works with dunst,
-// mako, notify-osd, …) with a default action that flock turns into "focus".
+// mako, notify-osd, …) with a default action that flockr turns into "focus".
 package notify
 
 import (
@@ -81,7 +81,7 @@ func (n *DBus) Notify(key, title, body string, critical bool) error {
 	}
 	hints := map[string]dbus.Variant{"urgency": dbus.MakeVariant(urgency), "category": dbus.MakeVariant("im.received")}
 	var id uint32
-	err := n.conn.Object(dest, path).Call(iface+".Notify", 0, "flock", replaces, "utilities-terminal",
+	err := n.conn.Object(dest, path).Call(iface+".Notify", 0, "flockr", replaces, "utilities-terminal",
 		title, body, []string{"default", "Focus"}, hints, timeout).Store(&id)
 	if err != nil {
 		return err

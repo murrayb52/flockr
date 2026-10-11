@@ -1,4 +1,4 @@
-module github.com/murrayb52/flock
+module github.com/murrayb52/flockr
 
 go 1.24.0
 

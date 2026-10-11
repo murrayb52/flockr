@@ -11,12 +11,12 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/murrayb52/flock/internal/config"
-	"github.com/murrayb52/flock/internal/protocol"
+	"github.com/murrayb52/flockr/internal/config"
+	"github.com/murrayb52/flockr/internal/protocol"
 )
 
 // ErrRunning means another daemon already owns the socket.
-var ErrRunning = errors.New("flock daemon is already running")
+var ErrRunning = errors.New("flockr daemon is already running")
 
 // Listen opens the Unix socket, refusing if a live daemon answers on it and
 // replacing a stale socket file otherwise.

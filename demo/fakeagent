@@ -1,13 +1,13 @@
 #!/bin/bash
 # fakeagent — a scripted stand-in for Claude Code / Pi, used for demos, GIFs and
-# end-to-end tests. It prints agent-like output and reports state to flock
+# end-to-end tests. It prints agent-like output and reports state to flockr
 # through the same paths the real integrations use:
-#   claude → `flock hook claude <Event>` with Claude Code's JSON payloads
-#   pi     → `flock event pi …`
+#   claude → `flockr hook claude <Event>` with Claude Code's JSON payloads
+#   pi     → `flockr event pi …`
 #
 # usage: fakeagent claude|pi [--ask] [--slow] [--resume ID] "first prompt" ["next prompt" ...]
 #   --ask        stop for permission/a question before finishing (answer with y)
-#   --resume ID  continue session ID (flock restores its label and notes)
+#   --resume ID  continue session ID (flockr restores its label and notes)
 #   --delay N    wait N seconds before the first prompt (for staging demos)
 # Must be run as ./fakeagent (not `bash fakeagent`) so the pane's command is
 # "fakeagent" rather than a shell.
@@ -23,9 +23,9 @@ orange=$'\e[38;5;173m'; purple=$'\e[38;5;141m'; green=$'\e[38;5;71m'; dim=$'\e[2
 emit() { # emit EVENT [json fields...] / pi: emit NAME key=value...
   if [[ $kind == claude ]]; then
     local ev=$1; shift
-    printf '{"session_id":"%s","hook_event_name":"%s"%s}' "$sid" "$ev" "$*" | flock hook claude "$ev"
+    printf '{"session_id":"%s","hook_event_name":"%s"%s}' "$sid" "$ev" "$*" | flockr hook claude "$ev"
   else
-    flock event pi "$@" session="$sid" >/dev/null 2>&1
+    flockr event pi "$@" session="$sid" >/dev/null 2>&1
   fi
 }
 json() { printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'; }

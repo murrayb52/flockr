@@ -1,4 +1,4 @@
-// Package tmux drives flock's private tmux server: every flock terminal is one
+// Package tmux drives flockr's private tmux server: every flockr terminal is one
 // session on it, its top status lines are the label header and notes strip,
 // and display-popup hosts the notes editor.
 package tmux
@@ -21,7 +21,7 @@ type Pane struct {
 	ID      string // %N
 	Cwd     string
 	Command string
-	Label   string // @flock_label on the session
+	Label   string // @flockr_label on the session
 	PID     int
 	// LabelInput is what the label prompt wrote ("=" + text); the daemon
 	// consumes and clears it. Labels never pass through a shell.
@@ -42,12 +42,12 @@ func (c Client) run(args ...string) (string, error) {
 	return out.String(), nil
 }
 
-// ErrNoServer means the flock tmux server is not running (no flock terminals).
-var ErrNoServer = errors.New("no flock tmux server")
+// ErrNoServer means the flockr tmux server is not running (no flockr terminals).
+var ErrNoServer = errors.New("no flockr tmux server")
 
-const paneFormat = "#{session_name}\t#{pane_id}\t#{pane_current_path}\t#{pane_current_command}\t#{@flock_label}\t#{pane_pid}\t#{@flock_label_input}"
+const paneFormat = "#{session_name}\t#{pane_id}\t#{pane_current_path}\t#{pane_current_command}\t#{@flockr_label}\t#{pane_pid}\t#{@flockr_label_input}"
 
-// ListPanes returns the first pane of every session (flock terminals have one).
+// ListPanes returns the first pane of every session (flockr terminals have one).
 func (c Client) ListPanes() ([]Pane, error) {
 	out, err := c.run("list-panes", "-a", "-F", paneFormat)
 	if err != nil {
@@ -160,7 +160,7 @@ func (c Client) Source(path string) error {
 	return err
 }
 
-// Running reports whether the flock tmux server is up.
+// Running reports whether the flockr tmux server is up.
 func (c Client) Running() bool {
 	return c.cmd("has-session").Run() == nil
 }

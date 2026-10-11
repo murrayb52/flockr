@@ -1,4 +1,4 @@
-// Package install adds (and removes) flock's integrations with agent harnesses.
+// Package install adds (and removes) flockr's integrations with agent harnesses.
 package install
 
 import (
@@ -10,7 +10,7 @@ import (
 	"strings"
 )
 
-// ClaudeEvents are the Claude Code hook events flock listens to.
+// ClaudeEvents are the Claude Code hook events flockr listens to.
 var ClaudeEvents = []string{"SessionStart", "UserPromptSubmit", "PreToolUse", "PostToolUse",
 	"PermissionRequest", "Notification", "Stop", "SessionEnd"}
 
@@ -108,9 +108,9 @@ type hookCommand struct {
 
 func shellQuote(s string) string { return "'" + strings.ReplaceAll(s, "'", `'\''`) + "'" }
 
-func isFlock(e json.RawMessage) bool { return bytes.Contains(e, []byte(marker)) }
+func isFlockr(e json.RawMessage) bool { return bytes.Contains(e, []byte(marker)) }
 
-// MergeClaude returns settings.json content with flock's hooks installed
+// MergeClaude returns settings.json content with flockr's hooks installed
 // (install=true) or removed, leaving every other setting and hook untouched.
 func MergeClaude(settings []byte, bin string, install bool) ([]byte, error) {
 	top, err := parseOrdered(settings)
@@ -130,7 +130,7 @@ func MergeClaude(settings []byte, bin string, install bool) ([]byte, error) {
 		}
 		kept := entries[:0]
 		for _, e := range entries {
-			if !isFlock(e) {
+			if !isFlockr(e) {
 				kept = append(kept, e)
 			}
 		}
@@ -177,7 +177,7 @@ func Claude(bin string, install bool) (string, error) {
 		return path, nil
 	}
 	if len(old) > 0 {
-		if err := os.WriteFile(path+".flock-backup", old, 0o600); err != nil {
+		if err := os.WriteFile(path+".flockr-backup", old, 0o600); err != nil {
 			return path, err
 		}
 	}

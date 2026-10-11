@@ -16,16 +16,16 @@ func TestDefaultsFollowXDG(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if c.Socket != "/run/user/42/flock/flock.sock" {
+	if c.Socket != "/run/user/42/flockr/flockr.sock" {
 		t.Errorf("socket = %q", c.Socket)
 	}
-	if c.DataDir != "/data/flock" {
+	if c.DataDir != "/data/flockr" {
 		t.Errorf("data dir = %q", c.DataDir)
 	}
 	if c.SidebarWidth != 280 || c.RailWidth != 64 {
 		t.Errorf("widths = %d/%d", c.SidebarWidth, c.RailWidth)
 	}
-	if c.TmuxSocket != "flock" {
+	if c.TmuxSocket != "flockr" {
 		t.Errorf("tmux socket = %q", c.TmuxSocket)
 	}
 }
@@ -33,8 +33,8 @@ func TestDefaultsFollowXDG(t *testing.T) {
 func TestFileOverridesDefaults(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("XDG_CONFIG_HOME", dir)
-	os.MkdirAll(filepath.Join(dir, "flock"), 0o755)
-	os.WriteFile(filepath.Join(dir, "flock", "config.toml"), []byte(`
+	os.MkdirAll(filepath.Join(dir, "flockr"), 0o755)
+	os.WriteFile(filepath.Join(dir, "flockr", "config.toml"), []byte(`
 terminal = "kitty"
 sidebar_width = 300
 notifications = false
@@ -51,8 +51,8 @@ notifications = false
 func TestBadFileIsAnError(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("XDG_CONFIG_HOME", dir)
-	os.MkdirAll(filepath.Join(dir, "flock"), 0o755)
-	os.WriteFile(filepath.Join(dir, "flock", "config.toml"), []byte(`terminal = `), 0o644)
+	os.MkdirAll(filepath.Join(dir, "flockr"), 0o755)
+	os.WriteFile(filepath.Join(dir, "flockr", "config.toml"), []byte(`terminal = `), 0o644)
 	if _, err := Load(); err == nil {
 		t.Fatal("expected a parse error")
 	}
@@ -60,17 +60,17 @@ func TestBadFileIsAnError(t *testing.T) {
 
 func TestSidebarCommand(t *testing.T) {
 	cases := map[string]string{
-		"alacritty":              "alacritty --class flock-sidebar,flock-sidebar -o font.size=9.5 -e flock sidebar",
-		"kitty":                  "kitty --class flock-sidebar -o font_size=9.5 -e flock sidebar",
-		"ghostty":                "ghostty --class=flock-sidebar --font-size=9.5 -e flock sidebar",
-		"wezterm":                "wezterm --config font_size=9.5 start --class flock-sidebar -- flock sidebar",
-		"foot":                   "foot --app-id flock-sidebar --font=monospace:size=9.5 flock sidebar",
-		"xterm":                  "xterm -class flock-sidebar -fa monospace -fs 9.5 -e flock sidebar",
-		"st -c {class} -e {cmd}": "st -c flock-sidebar -e flock sidebar",
-		"st -c {class} -f mono:size={font} -e {cmd}": "st -c flock-sidebar -f mono:size=9.5 -e flock sidebar",
+		"alacritty":              "alacritty --class flockr-sidebar,flockr-sidebar -o font.size=9.5 -e flockr sidebar",
+		"kitty":                  "kitty --class flockr-sidebar -o font_size=9.5 -e flockr sidebar",
+		"ghostty":                "ghostty --class=flockr-sidebar --font-size=9.5 -e flockr sidebar",
+		"wezterm":                "wezterm --config font_size=9.5 start --class flockr-sidebar -- flockr sidebar",
+		"foot":                   "foot --app-id flockr-sidebar --font=monospace:size=9.5 flockr sidebar",
+		"xterm":                  "xterm -class flockr-sidebar -fa monospace -fs 9.5 -e flockr sidebar",
+		"st -c {class} -e {cmd}": "st -c flockr-sidebar -e flockr sidebar",
+		"st -c {class} -f mono:size={font} -e {cmd}": "st -c flockr-sidebar -f mono:size=9.5 -e flockr sidebar",
 	}
 	for term, want := range cases {
-		got := Config{SidebarTerminal: term}.SidebarCommand("flock-sidebar", "flock sidebar", 9.5)
+		got := Config{SidebarTerminal: term}.SidebarCommand("flockr-sidebar", "flockr sidebar", 9.5)
 		if got != want {
 			t.Errorf("%s: got %q want %q", term, got, want)
 		}
@@ -79,14 +79,14 @@ func TestSidebarCommand(t *testing.T) {
 
 func TestOpenCommand(t *testing.T) {
 	cases := map[string]string{
-		"gnome-terminal":          "gnome-terminal -- '/b/flock' term",
-		"/usr/bin/kitty":          "kitty '/b/flock' term",
-		"alacritty":               "alacritty -e '/b/flock' term",
-		"sakura":                  "sakura -e '/b/flock' term",
-		"my-term --run {cmd} --x": "my-term --run '/b/flock' term --x",
+		"gnome-terminal":          "gnome-terminal -- '/b/flockr' term",
+		"/usr/bin/kitty":          "kitty '/b/flockr' term",
+		"alacritty":               "alacritty -e '/b/flockr' term",
+		"sakura":                  "sakura -e '/b/flockr' term",
+		"my-term --run {cmd} --x": "my-term --run '/b/flockr' term --x",
 	}
 	for term, want := range cases {
-		if got := (Config{Terminal: term}).OpenCommand("'/b/flock' term"); got != want {
+		if got := (Config{Terminal: term}).OpenCommand("'/b/flockr' term"); got != want {
 			t.Errorf("%s: got %q want %q", term, got, want)
 		}
 	}
@@ -101,7 +101,7 @@ func TestDefaultTerminalPrefersEnv(t *testing.T) {
 
 func TestRuntimeFallbackIsPerUser(t *testing.T) {
 	t.Setenv("XDG_RUNTIME_DIR", "")
-	if got := RuntimeDir(); !strings.HasSuffix(got, fmt.Sprintf("flock-%d", os.Getuid())) {
+	if got := RuntimeDir(); !strings.HasSuffix(got, fmt.Sprintf("flockr-%d", os.Getuid())) {
 		t.Errorf("fallback = %q", got)
 	}
 }

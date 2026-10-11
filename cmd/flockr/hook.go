@@ -8,13 +8,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/murrayb52/flock/internal/agents"
-	"github.com/murrayb52/flock/internal/config"
-	"github.com/murrayb52/flock/internal/hook"
-	"github.com/murrayb52/flock/internal/protocol"
+	"github.com/murrayb52/flockr/internal/agents"
+	"github.com/murrayb52/flockr/internal/config"
+	"github.com/murrayb52/flockr/internal/hook"
+	"github.com/murrayb52/flockr/internal/protocol"
 )
 
-// runHook handles `flock hook claude <Event>` from Claude Code. It never prints
+// runHook handles `flockr hook claude <Event>` from Claude Code. It never prints
 // and never fails: stdout of some hooks is fed back to the model, and a failing
 // hook would show up in the agent's UI.
 func runHook(args []string) {
@@ -23,12 +23,12 @@ func runHook(args []string) {
 	}
 	pane := os.Getenv("TMUX_PANE")
 	sock := strings.SplitN(os.Getenv("TMUX"), ",", 2)[0]
-	tmuxName := os.Getenv("FLOCK_TMUX")
+	tmuxName := os.Getenv("FLOCKR_TMUX")
 	if tmuxName == "" {
-		tmuxName = "flock"
+		tmuxName = "flockr"
 	}
 	if pane == "" || filepath.Base(sock) != tmuxName {
-		return // not running in a flock terminal
+		return // not running in a flockr terminal
 	}
 	payload, err := io.ReadAll(io.LimitReader(os.Stdin, 1<<20))
 	if err != nil {
@@ -38,7 +38,7 @@ func runHook(args []string) {
 	if !ok {
 		return
 	}
-	socket := os.Getenv("FLOCK_SOCKET")
+	socket := os.Getenv("FLOCKR_SOCKET")
 	if socket == "" {
 		cfg, _ := config.Load()
 		socket = cfg.Socket
@@ -49,7 +49,7 @@ func runHook(args []string) {
 // runEvent reports an agent event from a script or another harness.
 func runEvent(cfg config.Config, args []string) error {
 	if len(args) < 2 {
-		return fmt.Errorf("usage: flock event AGENT NAME session=ID [prompt=…] [detail=…] [activity=…] [source=…]")
+		return fmt.Errorf("usage: flockr event AGENT NAME session=ID [prompt=…] [detail=…] [activity=…] [source=…]")
 	}
 	ev := agents.Event{Agent: args[0], Name: args[1], Pane: os.Getenv("TMUX_PANE")}
 	for _, kv := range args[2:] {
@@ -73,7 +73,7 @@ func runEvent(cfg config.Config, args []string) error {
 		}
 	}
 	if ev.Pane == "" || ev.SessionID == "" {
-		return fmt.Errorf("run inside a flock terminal and pass session=ID")
+		return fmt.Errorf("run inside a flockr terminal and pass session=ID")
 	}
 	_, err := protocol.Call(cfg.Socket, protocol.Request{Op: protocol.OpEvent, Event: &ev}, time.Second)
 	return err

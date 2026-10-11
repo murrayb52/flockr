@@ -6,12 +6,12 @@ set -euo pipefail
 
 repo=$(cd "$(dirname "$0")/.." && pwd)
 out=${1:-$repo/docs/demo.gif}
-export FLOCK_SIZE=${FLOCK_SIZE:-1100x660} FLOCK_WORK=${FLOCK_WORK:-/tmp/flock-nested}
+export FLOCKR_SIZE=${FLOCKR_SIZE:-1100x660} FLOCKR_WORK=${FLOCKR_WORK:-/tmp/flockr-nested}
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 
 "$repo/demo/nested.sh" stop
-rm -rf "$FLOCK_WORK/data/flock"
+rm -rf "$FLOCKR_WORK/data/flockr"
 "$repo/demo/nested.sh" start
 eval "$("$repo/demo/nested.sh" env)"
 sleep 3
@@ -19,17 +19,17 @@ sleep 3
 k() { xdotool key --delay 90 "$@"; }
 ty() { xdotool type --delay 12 "$1"; }
 term() { k super+Return; sleep 1.2; ty "$1"; k Return; sleep 0.6; }
-mkdir -p /tmp/flock-demo/bookshelf/{api,app} /tmp/flock-demo/website
+mkdir -p /tmp/flockr-demo/bookshelf/{api,app} /tmp/flockr-demo/website
 
 # workspace 2 has an agent of its own (watch its logo on the bar)
 k super+2; sleep 0.5
-term "cd /tmp/flock-demo/website && clear && fakeagent claude --delay 9 'rewrite the pricing page copy'"
+term "cd /tmp/flockr-demo/website && clear && fakeagent claude --delay 9 'rewrite the pricing page copy'"
 k super+1; sleep 0.5
-term "cd /tmp/flock-demo/bookshelf/api && clear && fakeagent claude --ask --delay 4 'add pagination to the reading-list endpoint'"
-term "cd /tmp/flock-demo/bookshelf/app && clear && fakeagent pi --delay 3 'add offline caching to the book detail screen'"
-term "cd /tmp/flock-demo/bookshelf && clear"
+term "cd /tmp/flockr-demo/bookshelf/api && clear && fakeagent claude --ask --delay 4 'add pagination to the reading-list endpoint'"
+term "cd /tmp/flockr-demo/bookshelf/app && clear && fakeagent pi --delay 3 'add offline caching to the book detail screen'"
+term "cd /tmp/flockr-demo/bookshelf && clear"
 
-ffmpeg -y -loglevel error -f x11grab -draw_mouse 0 -framerate 12 -video_size "$FLOCK_SIZE" -i "$DISPLAY" \
+ffmpeg -y -loglevel error -f x11grab -draw_mouse 0 -framerate 12 -video_size "$FLOCKR_SIZE" -i "$DISPLAY" \
   -c:v libx264 -preset ultrafast -crf 16 "$tmp/demo.mp4" &
 rec=$!
 sleep 11          # agents work; Pi finishes, Claude asks for permission

@@ -1,9 +1,9 @@
-// flock integration for Pi — installed by `flock install pi`.
-// Reports agent state (working / needs input / done) to the flock daemon so the
+// flockr integration for Pi — installed by `flockr install pi`.
+// Reports agent state (working / needs input / done) to the flockr daemon so the
 // sidebar, notifications and terminal header can show it. It only activates
-// inside a flock terminal and never blocks or fails Pi: every send has a short
+// inside a flockr terminal and never blocks or fails Pi: every send has a short
 // timeout and errors are ignored.
-// FLOCK_INTEGRATION_VERSION=1
+// FLOCKR_INTEGRATION_VERSION=1
 // @ts-nocheck
 
 import fs from "node:fs";
@@ -11,22 +11,22 @@ import net from "node:net";
 import path from "node:path";
 
 const pane = process.env.TMUX_PANE;
-// flock terminals export FLOCK_SOCKET; the fallback mirrors flock's own
+// flockr terminals export FLOCKR_SOCKET; the fallback mirrors flockr's own
 // (a per-user directory, never a shared one).
 const socketPath =
-  process.env.FLOCK_SOCKET ||
+  process.env.FLOCKR_SOCKET ||
   (process.env.XDG_RUNTIME_DIR
-    ? path.join(process.env.XDG_RUNTIME_DIR, "flock", "flock.sock")
-    : path.join("/tmp", `flock-${process.getuid?.() ?? "user"}`, "flock.sock"));
+    ? path.join(process.env.XDG_RUNTIME_DIR, "flockr", "flockr.sock")
+    : path.join("/tmp", `flockr-${process.getuid?.() ?? "user"}`, "flockr.sock"));
 
-// Only report from panes on flock's private tmux server ($TMUX = "<socket>,<pid>,<idx>").
+// Only report from panes on flockr's private tmux server ($TMUX = "<socket>,<pid>,<idx>").
 function enabled(): boolean {
   const tmux = process.env.TMUX || "";
-  return !!pane && path.basename(tmux.split(",")[0] || "") === (process.env.FLOCK_TMUX || "flock");
+  return !!pane && path.basename(tmux.split(",")[0] || "") === (process.env.FLOCKR_TMUX || "flockr");
 }
 
 // Refuse a socket whose directory another user could have planted: it must be
-// a real directory owned by us and closed to everyone else (as flock checks).
+// a real directory owned by us and closed to everyone else (as flockr checks).
 function trustedSocket(): boolean {
   try {
     const st = fs.lstatSync(path.dirname(socketPath));

@@ -1,4 +1,4 @@
-// Package protocol is the newline-delimited JSON protocol on flock's Unix socket.
+// Package protocol is the newline-delimited JSON protocol on flockr's Unix socket.
 // Every connection sends one Request; the daemon answers with one Response, or
 // for "subscribe" keeps streaming Responses carrying snapshots.
 package protocol
@@ -13,9 +13,9 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/murrayb52/flock/internal/agents"
-	"github.com/murrayb52/flock/internal/config"
-	"github.com/murrayb52/flock/internal/model"
+	"github.com/murrayb52/flockr/internal/agents"
+	"github.com/murrayb52/flockr/internal/config"
+	"github.com/murrayb52/flockr/internal/model"
 )
 
 const (
@@ -47,11 +47,11 @@ type Response struct {
 }
 
 // ErrNoDaemon is returned when nothing listens on the socket.
-var ErrNoDaemon = errors.New("flock daemon is not running (start it with `flock daemon`)")
+var ErrNoDaemon = errors.New("flockr daemon is not running (start it with `flockr daemon`)")
 
 // ErrUntrusted means the socket's directory could have been planted by
-// another user, so flock refuses to talk to it.
-var ErrUntrusted = errors.New("flock socket directory is not private to you")
+// another user, so flockr refuses to talk to it.
+var ErrUntrusted = errors.New("flockr socket directory is not private to you")
 
 func dial(socket string, timeout time.Duration) (net.Conn, error) {
 	if err := config.CheckPrivateDir(filepath.Dir(socket)); err != nil {

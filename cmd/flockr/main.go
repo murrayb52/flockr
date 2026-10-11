@@ -1,4 +1,4 @@
-// Command flock is a keyboard-first i3 companion for CLI coding agents.
+// Command flockr is a keyboard-first i3 companion for CLI coding agents.
 package main
 
 import (
@@ -8,45 +8,45 @@ import (
 	"strings"
 	"time"
 
-	"github.com/murrayb52/flock/internal/config"
-	"github.com/murrayb52/flock/internal/protocol"
+	"github.com/murrayb52/flockr/internal/config"
+	"github.com/murrayb52/flockr/internal/protocol"
 )
 
 var version = "dev"
 
-const usage = `flock — a sidebar, labels, notes and notifications for CLI agents in i3
+const usage = `flockr — a sidebar, labels, notes and notifications for CLI agents in i3
 
 Usage:
-  flock daemon                 run the daemon (start it from your i3 config)
-  flock term [-- command...]   start a flock terminal (run it as your terminal's command)
-  flock install claude|pi|all  add the Claude Code hooks / Pi extension
-  flock uninstall claude|pi|all
+  flockr daemon                 run the daemon (start it from your i3 config)
+  flockr term [-- command...]   start a flockr terminal (run it as your terminal's command)
+  flockr install claude|pi|all  add the Claude Code hooks / Pi extension
+  flockr uninstall claude|pi|all
 
 Bindings (call these from i3):
-  flock sidebar [toggle|condense|expand|show|font +1|-1|SIZE]
-  flock notifications [on|off|toggle]
-  flock label                  name the focused terminal or agent
-  flock notes                  open/close the focused agent's notes
-  flock next                   focus the next agent that needs you
-  flock slot N                 move the focused window to position N in its stack
-  flock jump CON_ID            focus a window
+  flockr sidebar [toggle|condense|expand|show|font +1|-1|SIZE]
+  flockr notifications [on|off|toggle]
+  flockr label                  name the focused terminal or agent
+  flockr notes                  open/close the focused agent's notes
+  flockr next                   focus the next agent that needs you
+  flockr slot N                 move the focused window to position N in its stack
+  flockr jump CON_ID            focus a window
 
 Other agents:
-  flock event AGENT NAME session=ID [prompt=…] [detail=…] [activity=…] [source=…]
+  flockr event AGENT NAME session=ID [prompt=…] [detail=…] [activity=…] [source=…]
                                report state from any harness (NAME: start, prompt,
                                tool, input, resume_work, stop, end); run inside a
-                               flock terminal
+                               flockr terminal
 
 Feeds and tools:
-  flock bar [--plain]          status line for polybar (custom/script, tail = true)
-  flock status                 print what flock sees
-  flock tmux-config            print the private tmux configuration
-  flock version
+  flockr bar [--plain]          status line for polybar (custom/script, tail = true)
+  flockr status                 print what flockr sees
+  flockr tmux-config            print the private tmux configuration
+  flockr version
 `
 
 func main() {
 	if err := run(os.Args[1:]); err != nil {
-		fmt.Fprintln(os.Stderr, "flock:", err)
+		fmt.Fprintln(os.Stderr, "flockr:", err)
 		os.Exit(1)
 	}
 }
@@ -81,7 +81,7 @@ func run(args []string) error {
 		return runEvent(cfg, args[1:])
 	case "notes-ui":
 		if len(args) != 3 || args[1] != "--pane" {
-			return fmt.Errorf("usage: flock notes-ui --pane PANE")
+			return fmt.Errorf("usage: flockr notes-ui --pane PANE")
 		}
 		return runNotesUI(cfg, args[2])
 	case "bar":
@@ -94,13 +94,13 @@ func run(args []string) error {
 		fmt.Print(tmuxConfig())
 		return nil
 	case "version", "--version", "-v":
-		fmt.Println("flock", version)
+		fmt.Println("flockr", version)
 		return nil
 	case "help", "--help", "-h":
 		fmt.Print(usage)
 		return nil
 	}
-	return fmt.Errorf("unknown command %q (see `flock help`)", args[0])
+	return fmt.Errorf("unknown command %q (see `flockr help`)", args[0])
 }
 
 // command forwards a binding command to the daemon.
@@ -119,7 +119,7 @@ func command(cfg config.Config, args ...string) error {
 func binPath() string {
 	p, err := os.Executable()
 	if err != nil {
-		return "flock"
+		return "flockr"
 	}
 	if r, err := filepath.EvalSymlinks(p); err == nil {
 		p = r

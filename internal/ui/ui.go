@@ -9,7 +9,7 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/murrayb52/flock/internal/model"
+	"github.com/murrayb52/flockr/internal/model"
 )
 
 // Palette (matches the approved mockup and the user's i3 colours).

@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/murrayb52/flock/internal/model"
+	"github.com/murrayb52/flockr/internal/model"
 )
 
 var t0 = time.Date(2026, 10, 11, 12, 0, 0, 0, time.UTC)
@@ -87,7 +87,7 @@ func TestStopWhileFocusedIsSeenAndSilent(t *testing.T) {
 }
 
 func TestInputWhileFocusedStillNotifies(t *testing.T) {
-	// a permission prompt blocks the agent; flock still raises urgency/notification
+	// a permission prompt blocks the agent; flockr still raises urgency/notification
 	// so the state is consistent, the daemon decides whether to show a popup.
 	tb := New()
 	ch := apply(tb, Event{Agent: "claude", Name: "input", Pane: "%1", SessionID: "s1"}, focused)

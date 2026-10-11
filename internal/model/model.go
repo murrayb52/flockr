@@ -29,7 +29,7 @@ type Note struct {
 	Done bool   `json:"done"`
 }
 
-// Agent is a Claude Code or Pi session running in a flock terminal.
+// Agent is a Claude Code or Pi session running in a flockr terminal.
 type Agent struct {
 	Kind      string     `json:"kind"` // "claude" | "pi"
 	SessionID string     `json:"session_id"`
@@ -43,7 +43,7 @@ type Agent struct {
 	Notes     []Note     `json:"notes,omitempty"`
 }
 
-// Term is a flock terminal: one tmux session on the private flock server.
+// Term is a flockr terminal: one tmux session on the private flockr server.
 type Term struct {
 	Session string `json:"session"`
 	Pane    string `json:"pane"`

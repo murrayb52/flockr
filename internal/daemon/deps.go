@@ -3,7 +3,7 @@ package daemon
 import (
 	"context"
 
-	"github.com/murrayb52/flock/internal/tmux"
+	"github.com/murrayb52/flockr/internal/tmux"
 	"go.i3wm.org/i3/v4"
 )
 

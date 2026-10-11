@@ -3,7 +3,7 @@ package notesui
 import (
 	"testing"
 
-	"github.com/murrayb52/flock/internal/model"
+	"github.com/murrayb52/flockr/internal/model"
 )
 
 func keys(e *Editor, ks ...string) {

@@ -1,5 +1,5 @@
-// Package daemon is flock's long-running process. It owns all state: the i3
-// layout, the flock terminals on the private tmux server, agent states, labels
+// Package daemon is flockr's long-running process. It owns all state: the i3
+// layout, the flockr terminals on the private tmux server, agent states, labels
 // and notes. Everything else (sidebar, bar, notes editor, bindings, hooks) is
 // a client on its Unix socket.
 package daemon
@@ -17,13 +17,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/murrayb52/flock/internal/agents"
-	"github.com/murrayb52/flock/internal/config"
-	"github.com/murrayb52/flock/internal/i3tree"
-	"github.com/murrayb52/flock/internal/model"
-	"github.com/murrayb52/flock/internal/sessions"
-	"github.com/murrayb52/flock/internal/tmux"
-	"github.com/murrayb52/flock/internal/ui"
+	"github.com/murrayb52/flockr/internal/agents"
+	"github.com/murrayb52/flockr/internal/config"
+	"github.com/murrayb52/flockr/internal/i3tree"
+	"github.com/murrayb52/flockr/internal/model"
+	"github.com/murrayb52/flockr/internal/sessions"
+	"github.com/murrayb52/flockr/internal/tmux"
+	"github.com/murrayb52/flockr/internal/ui"
 	"go.i3wm.org/i3/v4"
 )
 
@@ -33,7 +33,7 @@ type Deps struct {
 	Notifier Notifier // may be nil
 	Urgency  Urgency  // may be nil
 	Launch   Launcher // may be nil
-	Bin      string   // absolute path of the flock binary
+	Bin      string   // absolute path of the flockr binary
 	Now      func() time.Time
 }
 
@@ -217,12 +217,12 @@ func isShell(cmd string) bool {
 }
 
 func (d *Daemon) applyLabel(p tmux.Pane, label string) {
-	opts := map[string]string{"@flock_label_input": ""}
+	opts := map[string]string{"@flockr_label_input": ""}
 	if a := d.agents.Get(p.ID); a != nil {
 		a.Label = label
 		d.saveRecord(a)
 	} else {
-		opts["@flock_label"] = label
+		opts["@flockr_label"] = label
 		p.Label = label
 		d.panes[p.Session] = p
 	}
@@ -250,7 +250,7 @@ func (d *Daemon) endAgent(pane string) {
 	}
 }
 
-// terms builds the flock terminals keyed by tmux session.
+// terms builds the flockr terminals keyed by tmux session.
 func (d *Daemon) terms() map[string]*model.Term {
 	out := map[string]*model.Term{}
 	for s, p := range d.panes {
@@ -346,7 +346,7 @@ func (d *Daemon) pushHeaders() {
 		}
 		h1, h2, lines := tmux.Header(w, now, d.home, d.hints)
 		name, _ := ui.Name(w)
-		opts := map[string]string{"@flock_h1": h1, "@flock_h2": h2, "status": map[int]string{1: "on", 2: "2"}[lines], "@flock_title": name}
+		opts := map[string]string{"@flockr_h1": h1, "@flockr_h2": h2, "status": map[int]string{1: "on", 2: "2"}[lines], "@flockr_title": name}
 		last := d.headers[w.Term.Session]
 		changed := map[string]string{}
 		for k, v := range opts {

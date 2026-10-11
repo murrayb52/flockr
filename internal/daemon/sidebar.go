@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/murrayb52/flock/internal/i3tree"
+	"github.com/murrayb52/flockr/internal/i3tree"
 	"go.i3wm.org/i3/v4"
 )
 
@@ -121,7 +121,7 @@ func (d *Daemon) placeSidebar() {
 	}
 	if n == nil {
 		// Not open (or closed by the user): no margin. It only reopens on
-		// daemon start or `flock sidebar show`.
+		// daemon start or `flockr sidebar show`.
 		if d.gap > 0 && d.d.WM.Command("gaps left all set 0") == nil {
 			d.gap = 0
 		}

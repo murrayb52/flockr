@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/murrayb52/flock/internal/agents"
+	"github.com/murrayb52/flockr/internal/agents"
 )
 
 type claudePayload struct {
@@ -21,7 +21,7 @@ type claudePayload struct {
 }
 
 // FromClaude maps a Claude Code hook (event name as configured in settings.json,
-// payload from stdin) to an agents.Event. ok is false for events flock ignores.
+// payload from stdin) to an agents.Event. ok is false for events flockr ignores.
 func FromClaude(event string, payload []byte, pane string) (agents.Event, bool) {
 	var p claudePayload
 	if err := json.Unmarshal(payload, &p); err != nil || p.SessionID == "" {
