@@ -13,24 +13,26 @@ import (
 type settings struct {
 	SidebarFont   float64 `json:"sidebar_font_size,omitempty"`
 	Notifications *bool   `json:"notifications,omitempty"`
+	TermsOnly     bool    `json:"terms_only,omitempty"` // sidebar lists only flockr terminals
 }
 
 func settingsPath(cfg config.Config) string { return filepath.Join(cfg.DataDir, "settings.json") }
 
-// loadSettings returns the font size and notification switch: the menu's
-// saved choices, else the config file's.
-func loadSettings(cfg config.Config) (font float64, notify bool) {
-	font, notify = cfg.SidebarFont, cfg.Notifications
+// loadSettings returns the menu's saved choices, falling back to the config
+// file's font size and notification switch.
+func loadSettings(cfg config.Config) settings {
 	var s settings
-	if b, err := os.ReadFile(settingsPath(cfg)); err == nil && json.Unmarshal(b, &s) == nil {
-		if s.SidebarFont > 0 {
-			font = s.SidebarFont
-		}
-		if s.Notifications != nil {
-			notify = *s.Notifications
-		}
+	if b, err := os.ReadFile(settingsPath(cfg)); err == nil {
+		json.Unmarshal(b, &s)
 	}
-	return font, notify
+	if s.SidebarFont <= 0 {
+		s.SidebarFont = cfg.SidebarFont
+	}
+	if s.Notifications == nil {
+		on := cfg.Notifications
+		s.Notifications = &on
+	}
+	return s
 }
 
 // saveSettings writes the current menu choices (called with d.mu held).
@@ -39,7 +41,7 @@ func (d *Daemon) saveSettings() error {
 		return err
 	}
 	on := d.notifyOn
-	b, _ := json.Marshal(settings{SidebarFont: d.font, Notifications: &on})
+	b, _ := json.Marshal(settings{SidebarFont: d.font, Notifications: &on, TermsOnly: d.termsOnly})
 	return config.WriteFileAtomic(settingsPath(d.cfg), b, 0o600)
 }
 
@@ -56,6 +58,28 @@ func (d *Daemon) setNotifications(v string) error {
 		d.notifyOn = !d.notifyOn
 	default:
 		return errUsage("notifications on|off|toggle")
+	}
+	if err := d.saveSettings(); err != nil {
+		return err
+	}
+	d.rebuild()
+	return nil
+}
+
+// setFilter chooses what the sidebar lists: "all" windows, flockr "terms"
+// only, or "toggle".
+func (d *Daemon) setFilter(v string) error {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	switch v {
+	case "all":
+		d.termsOnly = false
+	case "terms":
+		d.termsOnly = true
+	case "toggle":
+		d.termsOnly = !d.termsOnly
+	default:
+		return errUsage("sidebar filter all|terms|toggle")
 	}
 	if err := d.saveSettings(); err != nil {
 		return err

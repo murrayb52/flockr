@@ -67,6 +67,7 @@ type Daemon struct {
 	relaunch      bool      // sidebar closed to reopen at a new font size
 	font          float64   // sidebar font size (points)
 	notifyOn      bool      // desktop notifications (menu switch)
+	termsOnly     bool      // sidebar lists only flockr terminals (menu switch)
 	dirty         chan struct{}
 }
 
@@ -75,9 +76,9 @@ func New(cfg config.Config, deps Deps) *Daemon {
 		deps.Now = time.Now
 	}
 	home, _ := os.UserHomeDir()
-	font, notifyOn := loadSettings(cfg)
+	set := loadSettings(cfg)
 	return &Daemon{
-		font: font, notifyOn: notifyOn,
+		font: set.SidebarFont, notifyOn: *set.Notifications, termsOnly: set.TermsOnly,
 		cfg: cfg, d: deps, home: home,
 		store:    sessions.Store{Dir: filepath.Join(cfg.DataDir, "sessions")},
 		hints:    tmux.Hints{Label: cfg.LabelKey, Notes: cfg.NotesKey},
@@ -266,7 +267,7 @@ func (d *Daemon) terms() map[string]*model.Term {
 }
 
 func (d *Daemon) build() model.Snapshot {
-	return model.Snapshot{Workspaces: i3tree.Build(d.tree, d.infos, d.terms()), Condensed: d.condensed, Font: d.font, Muted: !d.notifyOn}
+	return model.Snapshot{Workspaces: i3tree.Build(d.tree, d.infos, d.terms()), Condensed: d.condensed, Font: d.font, Muted: !d.notifyOn, TermsOnly: d.termsOnly}
 }
 
 func (d *Daemon) rebuild() {

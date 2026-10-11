@@ -97,13 +97,16 @@ func Render(snap model.Snapshot, f Frame) []Line {
 	if !ok {
 		return []Line{{Text: stEmpty.Render(" waiting for i3…")}}
 	}
+	if snap.TermsOnly {
+		ws = termsOnly(ws)
+	}
 	railMode := f.Width <= RailColumns || snap.Condensed
 	var body, foot []Line
 	if railMode {
 		body = rail(ws, f)
 		foot = []Line{railMenu()}
 	} else {
-		body = expanded(ws, f)
+		body = expanded(ws, f, snap.TermsOnly)
 		foot = menu(snap, f)
 	}
 	if f.Height <= len(foot) {
@@ -117,6 +120,26 @@ func Render(snap model.Snapshot, f Frame) []Line {
 		body = append(body, Line{})
 	}
 	return append(body, foot...)
+}
+
+// termsOnly keeps only flockr terminals, dropping groups left empty. Group
+// labels and slots still describe i3's real layout.
+func termsOnly(ws model.Workspace) model.Workspace {
+	groups := ws.Groups
+	ws.Groups = nil
+	for _, g := range groups {
+		var keep []model.Window
+		for _, w := range g.Windows {
+			if w.Term != nil {
+				keep = append(keep, w)
+			}
+		}
+		if len(keep) > 0 {
+			g.Windows = keep
+			ws.Groups = append(ws.Groups, g)
+		}
+	}
+	return ws
 }
 
 // Local actions the sidebar handles itself rather than sending to the daemon.
@@ -164,10 +187,15 @@ func menu(snap model.Snapshot, f Frame) []Line {
 	if snap.Font > 0 {
 		size = strconv.FormatFloat(snap.Font, 'f', -1, 64)
 	}
-	var text, side, notes, close lineBuilder
+	var text, side, show, notes, close lineBuilder
 	text.text(pad("text size", col)).button(" − ", "sidebar", "font", "-1").
 		text(stName.Render(fmt.Sprintf(" %s ", size))).button(" + ", "sidebar", "font", "+1")
 	side.text(pad("sidebar", col)).button(" condense ", "sidebar", "condense")
+	if snap.TermsOnly {
+		show.text(pad("show", col)).button(" terminals ", "sidebar", "filter", "all")
+	} else {
+		show.text(pad("show", col)).button(" all windows ", "sidebar", "filter", "terms")
+	}
 	state := " on "
 	if snap.Muted {
 		state = " off "
@@ -177,7 +205,7 @@ func menu(snap model.Snapshot, f Frame) []Line {
 	l := func(st model.Status, s string) string { return logo(st, 0) + stLegend.Render(s) }
 	return []Line{
 		rule(f.Width),
-		text.Line, side.Line, notes.Line,
+		text.Line, side.Line, show.Line, notes.Line,
 		rule(f.Width),
 		{Text: " " + l(model.StatusInput, " needs you  ") + l(model.StatusDone, " done")},
 		{Text: " " + l(model.StatusWorking, " working    ") + l(model.StatusIdle, " idle")},
@@ -194,9 +222,12 @@ func railMenu() Line {
 	return b.Line
 }
 
-func expanded(ws model.Workspace, f Frame) []Line {
+func expanded(ws model.Workspace, f Frame, onlyTerms bool) []Line {
 	var out []Line
 	if len(ws.Groups) == 0 {
+		if onlyTerms {
+			return []Line{{}, {Text: stEmpty.Render(" no flockr terminals here")}}
+		}
 		return []Line{{}, {Text: stEmpty.Render(" empty workspace")}}
 	}
 	for gi, g := range ws.Groups {

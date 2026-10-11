@@ -23,7 +23,7 @@ Usage:
   flockr uninstall claude|pi|all
 
 Bindings (call these from i3):
-  flockr sidebar [toggle|condense|expand|show|font +1|-1|SIZE]
+  flockr sidebar [toggle|condense|expand|show|font +1|-1|SIZE|filter all|terms|toggle]
   flockr notifications [on|off|toggle]
   flockr label                  name the focused terminal or agent
   flockr notes                  open/close the focused agent's notes

@@ -74,6 +74,16 @@ func (d *Daemon) command(args []string) protocol.Response {
 		if sub == "font" {
 			return d.fontCmd(args[2:])
 		}
+		if sub == "filter" {
+			v := "toggle"
+			if len(args) > 2 {
+				v = args[2]
+			}
+			if err := d.setFilter(v); err != nil {
+				return fail(err.Error())
+			}
+			return ok("")
+		}
 		return d.sidebar(sub)
 	case "notifications":
 		v := "toggle"
@@ -240,7 +250,7 @@ func (d *Daemon) sidebar(sub string) protocol.Response {
 		d.launched = false
 	default:
 		d.mu.Unlock()
-		return fail("usage: sidebar toggle|condense|expand|show|font +1|-1|SIZE")
+		return fail("usage: sidebar toggle|condense|expand|show|font +1|-1|SIZE|filter all|terms|toggle")
 	}
 	d.rebuild()
 	d.mu.Unlock()

@@ -448,6 +448,23 @@ func TestNotificationsSwitchIsSavedAndMutes(t *testing.T) {
 	}
 }
 
+func TestSidebarFilterIsSaved(t *testing.T) {
+	d, _, _, _, _ := fixture(t)
+	if r := d.Command([]string{"sidebar", "filter", "terms"}); !r.OK || !d.Snapshot().TermsOnly {
+		t.Fatalf("terms: %+v", r)
+	}
+	if d2 := New(d.cfg, d.d); !d2.termsOnly {
+		t.Error("the filter must survive a daemon restart")
+	}
+	d.Command([]string{"sidebar", "filter"})
+	if d.Snapshot().TermsOnly {
+		t.Error("no argument toggles")
+	}
+	if r := d.Command([]string{"sidebar", "filter", "some"}); r.OK {
+		t.Error("bad value must fail")
+	}
+}
+
 func TestFailedKeyCommandsSayWhy(t *testing.T) {
 	d, _, _, n, _ := fixture(t) // firefox has focus
 	if r := d.Command([]string{"label"}); r.OK {

@@ -139,6 +139,40 @@ func TestMenu(t *testing.T) {
 	}
 }
 
+func TestTermsOnly(t *testing.T) {
+	s := snapshot()
+	all := strings.Join(plain(Render(s, Frame{Width: 36, Height: 40, Now: now, Menu: true})), "\n")
+	if !strings.Contains(all, "Firefox") || !strings.Contains(all, "all windows") {
+		t.Fatalf("all windows:\n%s", all)
+	}
+	s.TermsOnly = true
+	lines := Render(s, Frame{Width: 36, Height: 40, Now: now, Menu: true})
+	text := strings.Join(plain(lines), "\n")
+	if strings.Contains(text, "Firefox") || strings.Contains(text, "RIGHT") {
+		t.Errorf("terminals only still lists other windows (or their empty group):\n%s", text)
+	}
+	if !strings.Contains(text, "reading-list") || !strings.Contains(text, "terminals") {
+		t.Errorf("terminals only:\n%s", text)
+	}
+	for _, l := range lines {
+		if a := button(l, " terminals "); a != nil && strings.Join(a, " ") != "sidebar filter all" {
+			t.Errorf("switch back = %v", a)
+		}
+	}
+	rail := strings.Join(plain(Render(s, Frame{Width: 8, Height: 20, Now: now})), "\n")
+	if strings.Contains(rail, "◐") {
+		t.Errorf("rail lists firefox:\n%s", rail)
+	}
+	for i := range s.Workspaces {
+		if s.Workspaces[i].Focused {
+			s.Workspaces[i].Groups = []model.Group{{Windows: []model.Window{{App: "firefox", Title: "x"}}}}
+		}
+	}
+	if got := strings.Join(plain(Render(s, Frame{Width: 36, Now: now})), ""); !strings.Contains(got, "no flockr terminals") {
+		t.Errorf("empty filtered workspace: %q", got)
+	}
+}
+
 func TestShortSidebarKeepsMenu(t *testing.T) {
 	lines := Render(snapshot(), Frame{Width: 30, Height: 4, Now: now})
 	if len(lines) != 4 || button(lines[3], "≡ menu") == nil {

@@ -24,8 +24,8 @@ every action is an **i3 binding**, so it works whichever agent has the keyboard.
 
 - **Sidebar** — the focused workspace's windows, grouped the way i3 lays them out (columns, stacks,
   tabs), with app icons, slot numbers, agent state and how long it has been in it. `Super+b` condenses it
-  to an icon rail. Its `≡ menu` (click it) holds the text size, condense, a notifications switch and
-  the legend.
+  to an icon rail. Its `≡ menu` (click it) holds the text size, condense, a switch between all windows
+  and flockr terminals only, a notifications switch and the legend.
 - **Agent state** — working (amber spinner), needs you (red `!`), done but not yet seen (green `✓`) or
   idle (`○`), reported by the agents themselves through Claude Code hooks and a Pi extension.
 - **Notifications** — a desktop notification when an agent needs you or finishes out of sight; its
