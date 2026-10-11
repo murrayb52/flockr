@@ -8,13 +8,14 @@
 # usage: fakeagent claude|pi [--ask] [--slow] [--resume ID] "first prompt" ["next prompt" ...]
 #   --ask        stop for permission/a question before finishing (answer with y)
 #   --resume ID  continue session ID (flock restores its label and notes)
+#   --delay N    wait N seconds before the first prompt (for staging demos)
 # Must be run as ./fakeagent (not `bash fakeagent`) so the pane's command is
 # "fakeagent" rather than a shell.
 
 kind=$1; shift
 ask=0; pause=1.4; sid="demo-$kind-$(printf '%04x' $RANDOM)"; source=startup
 while [[ $1 == --* ]]; do
-  case $1 in --ask) ask=1 ;; --slow) pause=2.5 ;; --resume) sid=$2; source=resume; shift ;; esac
+  case $1 in --ask) ask=1 ;; --slow) pause=2.5 ;; --resume) sid=$2; source=resume; shift ;; --delay) delay=$2; shift ;; esac
   shift
 done
 orange=$'\e[38;5;173m'; purple=$'\e[38;5;141m'; green=$'\e[38;5;71m'; dim=$'\e[2m'; bold=$'\e[1m'; r=$'\e[0m'
@@ -62,7 +63,7 @@ turn() {
       emit PostToolUse ',"tool_name":"Bash","tool_input":{"command":"npm test -- lists"}'
     fi
     sleep "$pause"
-    local msg="Done — the endpoint now takes ?cursor and ?limit. Tests pass."
+    local msg="Done: ${prompt}. Typecheck and tests pass."
     printf '\n⏺ %s\n\n' "$msg"
     emit Stop ",\"last_assistant_message\":\"$(json "$msg")\""
   else
@@ -89,6 +90,7 @@ turn() {
   fi
 }
 
+sleep "${delay:-0}"
 for p in "$@"; do turn "$p"; done
 while true; do
   printf '%s>%s ' "$dim" "$r"

@@ -267,7 +267,7 @@ const newSid = () => Math.random().toString(16).slice(2, 8);
 const note = (text, done = false) => ({text, done});
 const app = (app, title) => ({id:++uid, app, title, label:''});
 const col = (...wins) => ({wins, f:0});
-const P = '<span class="pr">muzz@box</span>';
+const P = '<span class="pr">you@box</span>';
 const prompt = cwd => `${P} <span class="pd">${esc(cwd)}</span> ❯ `;
 const WS = [
   {n:1, name:'WellRead', dir:'~/code/wellread', fc:0, cols:[
@@ -380,7 +380,7 @@ function runShell(w, cmd) {
   if (c === 'exit') return closeWin(w);
   if (c === 'clear') { w.shell = []; return; }
   if (!c) return;
-  const out = {ls:'README.md  package.json  src  tests', pwd:w.cwd.replace('~', '/home/muzz'),
+  const out = {ls:'README.md  package.json  src  tests', pwd:w.cwd.replace('~', '/home/you'),
     'git status':'On branch main\nnothing to commit, working tree clean'}[c] ?? `zsh: command not found: ${c.split(' ')[0]}`;
   out.split('\n').forEach(l => w.shell.push(esc(l)));
 }
