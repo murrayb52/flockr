@@ -6,6 +6,7 @@
 // FLOCK_INTEGRATION_VERSION=1
 // @ts-nocheck
 
+import fs from "node:fs";
 import net from "node:net";
 import path from "node:path";
 
@@ -24,10 +25,22 @@ function enabled(): boolean {
   return !!pane && path.basename(tmux.split(",")[0] || "") === (process.env.FLOCK_TMUX || "flock");
 }
 
+// Refuse a socket whose directory another user could have planted: it must be
+// a real directory owned by us and closed to everyone else (as flock checks).
+function trustedSocket(): boolean {
+  try {
+    const st = fs.lstatSync(path.dirname(socketPath));
+    const uid = process.getuid?.();
+    return st.isDirectory() && (uid === undefined || st.uid === uid) && (st.mode & 0o077) === 0;
+  } catch {
+    return false;
+  }
+}
+
 let sessionId = "";
 
 function send(name: string, fields: Record<string, string> = {}): Promise<void> {
-  if (!enabled() || !sessionId) return Promise.resolve();
+  if (!enabled() || !sessionId || !trustedSocket()) return Promise.resolve();
   const event = { agent: "pi", name, pane, session_id: sessionId, ...fields };
   return new Promise((resolve) => {
     let done = false;

@@ -9,9 +9,12 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/murrayb52/flock/internal/agents"
+	"github.com/murrayb52/flock/internal/config"
 	"github.com/murrayb52/flock/internal/model"
 )
 
@@ -46,7 +49,17 @@ type Response struct {
 // ErrNoDaemon is returned when nothing listens on the socket.
 var ErrNoDaemon = errors.New("flock daemon is not running (start it with `flock daemon`)")
 
+// ErrUntrusted means the socket's directory could have been planted by
+// another user, so flock refuses to talk to it.
+var ErrUntrusted = errors.New("flock socket directory is not private to you")
+
 func dial(socket string, timeout time.Duration) (net.Conn, error) {
+	if err := config.CheckPrivateDir(filepath.Dir(socket)); err != nil {
+		if os.IsNotExist(err) {
+			return nil, ErrNoDaemon
+		}
+		return nil, fmt.Errorf("%w: %v", ErrUntrusted, err)
+	}
 	c, err := net.DialTimeout("unix", socket, timeout)
 	if err != nil {
 		return nil, ErrNoDaemon

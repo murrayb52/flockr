@@ -82,6 +82,12 @@ func PrivateDir(dir string) error {
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return err
 	}
+	return CheckPrivateDir(dir)
+}
+
+// CheckPrivateDir is PrivateDir without creating anything: clients use it
+// before trusting a socket in dir.
+func CheckPrivateDir(dir string) error {
 	fi, err := os.Lstat(dir)
 	if err != nil {
 		return err
