@@ -87,6 +87,7 @@ date = %a %d %b %H:%M
 label-foreground = #c8ccd4
 EOF
   Xephyr "$display" -screen "$size" -br -ac -noreset -no-host-grab >/dev/null 2>&1 &
+  echo $! >"$work/xephyr.pid"
   sleep 1
   ( eval "$(env_vars)"; setsid dbus-run-session -- sh -c \
       "dunst >$work/dunst.log 2>&1 & (sleep 1; polybar -c $work/config/polybar/config.ini flock >$work/polybar.log 2>&1) & exec i3 -c $work/config/i3/config" \
@@ -97,7 +98,10 @@ EOF
 
 stop() {
   tmux -L flock kill-server 2>/dev/null || true
-  pkill -f "Xephyr $display" 2>/dev/null || true
+  # by recorded pid: `pkill -f` would also match any shell whose command line
+  # mentions the display
+  [[ -f $work/xephyr.pid ]] && kill "$(cat "$work/xephyr.pid")" 2>/dev/null || true
+  rm -f "$work/xephyr.pid"
   rm -rf "$work/run"
 }
 

@@ -118,7 +118,13 @@ func (d *Daemon) Run(ctx context.Context) {
 		alive := true
 		select {
 		case <-ctx.Done():
-			d.d.WM.Command("gaps left all set 0")
+			// give the margin back, but don't wait on an i3 that is already gone
+			done := make(chan struct{})
+			go func() { d.d.WM.Command("gaps left all set 0"); close(done) }()
+			select {
+			case <-done:
+			case <-time.After(time.Second):
+			}
 			return
 		case <-events:
 			// let a burst of i3 events settle into one refresh
