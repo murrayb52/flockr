@@ -56,13 +56,19 @@ func (d *Daemon) placeSidebar() {
 	}
 	d.launched = false // the launched window has arrived
 	var area i3.Rect
+	var output string
 	for _, ws := range d.infos {
 		if ws.Focused {
-			area = ws.Rect
+			area, output = ws.Rect, ws.Output
 		}
 	}
 	if area.Width == 0 {
 		return
+	}
+	// The workspace rect already excludes the gap we add, so the left edge comes
+	// from the output itself; top and height still come from the workspace (bars).
+	if out := d.tree.FindChild(func(n *i3.Node) bool { return n.Type == i3.OutputNode && n.Name == output }); out != nil {
+		area.X = out.Rect.X
 	}
 	want := int64(d.cfg.SidebarWidth)
 	if d.condensed {
@@ -70,6 +76,12 @@ func (d *Daemon) placeSidebar() {
 	}
 	var cmds []string
 	con := fmt.Sprintf("[con_id=%d] ", n.ID)
+	// style each new sidebar window once: catch-all for_window border rules in
+	// user configs would otherwise win over the example's rule
+	if d.sidebarStyled != n.ID {
+		d.sidebarStyled = n.ID
+		cmds = append(cmds, con+"floating enable", con+"sticky enable", con+"border none")
+	}
 	if abs(n.Rect.X-area.X) > 1 || abs(n.Rect.Y-area.Y) > 1 {
 		cmds = append(cmds, con+fmt.Sprintf("move absolute position %d px %d px", area.X, area.Y))
 	}

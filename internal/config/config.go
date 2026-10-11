@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"syscall"
 
 	"github.com/BurntSushi/toml"
 )
@@ -60,13 +61,63 @@ func Load() (Config, error) {
 			return c, fmt.Errorf("%s: %w", Path(), err)
 		}
 	}
-	runtime := os.Getenv("XDG_RUNTIME_DIR")
-	if runtime == "" {
-		runtime = os.TempDir()
-	}
-	c.Socket = filepath.Join(runtime, "flock", "flock.sock")
+	c.Socket = filepath.Join(RuntimeDir(), "flock.sock")
 	c.DataDir = filepath.Join(xdg("XDG_DATA_HOME", ".local/share"), "flock")
 	return c, nil
+}
+
+// RuntimeDir is flock's private runtime directory: $XDG_RUNTIME_DIR/flock, or
+// /tmp/flock-<uid> when that is unset (never a directory shared between users).
+func RuntimeDir() string {
+	if r := os.Getenv("XDG_RUNTIME_DIR"); r != "" {
+		return filepath.Join(r, "flock")
+	}
+	return filepath.Join(os.TempDir(), fmt.Sprintf("flock-%d", os.Getuid()))
+}
+
+// PrivateDir creates dir (0700) and refuses to use it unless it is a real
+// directory owned by the current user and inaccessible to others, so another
+// local user cannot pre-create it to plant a socket or config.
+func PrivateDir(dir string) error {
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		return err
+	}
+	fi, err := os.Lstat(dir)
+	if err != nil {
+		return err
+	}
+	st, ok := fi.Sys().(*syscall.Stat_t)
+	switch {
+	case !fi.IsDir():
+		return fmt.Errorf("%s is not a directory", dir)
+	case ok && int(st.Uid) != os.Getuid():
+		return fmt.Errorf("%s is owned by another user", dir)
+	case fi.Mode().Perm()&0o077 != 0:
+		return fmt.Errorf("%s is accessible to other users (mode %o); fix with chmod 700", dir, fi.Mode().Perm())
+	}
+	return nil
+}
+
+// WriteFileAtomic writes data via a fresh temporary file renamed into place,
+// so a pre-existing file or symlink at path is replaced, never followed.
+func WriteFileAtomic(path string, data []byte, perm os.FileMode) error {
+	f, err := os.CreateTemp(filepath.Dir(path), "."+filepath.Base(path)+".*")
+	if err != nil {
+		return err
+	}
+	defer os.Remove(f.Name())
+	if _, err := f.Write(data); err != nil {
+		f.Close()
+		return err
+	}
+	if err := f.Chmod(perm); err != nil {
+		f.Close()
+		return err
+	}
+	if err := f.Close(); err != nil {
+		return err
+	}
+	return os.Rename(f.Name(), path)
 }
 
 var templates = map[string]string{

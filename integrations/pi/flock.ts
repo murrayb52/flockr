@@ -10,9 +10,13 @@ import net from "node:net";
 import path from "node:path";
 
 const pane = process.env.TMUX_PANE;
+// flock terminals export FLOCK_SOCKET; the fallback mirrors flock's own
+// (a per-user directory, never a shared one).
 const socketPath =
   process.env.FLOCK_SOCKET ||
-  path.join(process.env.XDG_RUNTIME_DIR || "/tmp", "flock", "flock.sock");
+  (process.env.XDG_RUNTIME_DIR
+    ? path.join(process.env.XDG_RUNTIME_DIR, "flock", "flock.sock")
+    : path.join("/tmp", `flock-${process.getuid?.() ?? "user"}`, "flock.sock"));
 
 // Only report from panes on flock's private tmux server ($TMUX = "<socket>,<pid>,<idx>").
 function enabled(): boolean {

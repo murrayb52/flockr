@@ -30,6 +30,12 @@ Bindings (call these from i3):
   flock slot N                 move the focused window to position N in its stack
   flock jump CON_ID            focus a window
 
+Other agents:
+  flock event AGENT NAME session=ID [prompt=…] [detail=…] [activity=…] [source=…]
+                               report state from any harness (NAME: start, prompt,
+                               tool, input, resume_work, stop, end); run inside a
+                               flock terminal
+
 Feeds and tools:
   flock bar [--plain]          status line for polybar (custom/script, tail = true)
   flock status                 print what flock sees
@@ -70,6 +76,8 @@ func run(args []string) error {
 		return command(cfg, args...)
 	case "label", "notes", "next", "slot", "jump", "refresh":
 		return command(cfg, args...)
+	case "event":
+		return runEvent(cfg, args[1:])
 	case "notes-ui":
 		if len(args) != 3 || args[1] != "--pane" {
 			return fmt.Errorf("usage: flock notes-ui --pane PANE")

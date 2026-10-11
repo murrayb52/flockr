@@ -1,0 +1,99 @@
+#!/bin/bash
+# fakeagent — a scripted stand-in for Claude Code / Pi, used for demos, GIFs and
+# end-to-end tests. It prints agent-like output and reports state to flock
+# through the same paths the real integrations use:
+#   claude → `flock hook claude <Event>` with Claude Code's JSON payloads
+#   pi     → `flock event pi …`
+#
+# usage: fakeagent claude|pi [--ask] [--slow] "first prompt" ["next prompt" ...]
+#   --ask   stop for permission/a question before finishing (answer with y)
+# Must be run as ./fakeagent (not `bash fakeagent`) so the pane's command is
+# "fakeagent" rather than a shell.
+
+kind=$1; shift
+ask=0; pause=1.4
+while [[ $1 == --* ]]; do
+  case $1 in --ask) ask=1 ;; --slow) pause=2.5 ;; esac
+  shift
+done
+sid="demo-$kind-$(printf '%04x' $RANDOM)"
+orange=$'\e[38;5;173m'; purple=$'\e[38;5;141m'; green=$'\e[38;5;71m'; dim=$'\e[2m'; bold=$'\e[1m'; r=$'\e[0m'
+
+emit() { # emit EVENT [json fields...] / pi: emit NAME key=value...
+  if [[ $kind == claude ]]; then
+    local ev=$1; shift
+    printf '{"session_id":"%s","hook_event_name":"%s"%s}' "$sid" "$ev" "$*" | flock hook claude "$ev"
+  else
+    flock event pi "$@" session="$sid" >/dev/null 2>&1
+  fi
+}
+json() { printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'; }
+
+if [[ $kind == claude ]]; then
+  printf '%s╭──────────────────────────────╮%s\n%s│%s %s✻%s Claude Code  %s%s%s\n%s╰──────────────────────────────╯%s\n\n' \
+    "$orange" "$r" "$orange" "$r" "$orange" "$r" "$dim" "${PWD/#$HOME/~}" "$r" "$orange" "$r"
+  emit SessionStart ',"source":"startup"'
+else
+  printf '%sπ pi%s %s· %s%s\n\n' "$purple" "$r" "$dim" "${PWD/#$HOME/~}" "$r"
+  emit start source=startup
+fi
+
+steps_claude=("Read|src/routes/lists.ts|Read 140 lines" "Grep|\"paginate\"|Found 2 files" "Update|src/routes/lists.ts|Updated with 31 additions" "Bash|npm run typecheck|No errors")
+steps_pi=("read|app/screens/Book.tsx|212 lines" "edit|app/lib/cache.ts|+44 −3" "bash|npx tsc --noEmit|exit 0")
+
+turn() {
+  local prompt=$1
+  if [[ $kind == claude ]]; then
+    printf '%s> %s%s\n\n' "$bold" "$prompt" "$r"
+    emit UserPromptSubmit ",\"prompt\":\"$(json "$prompt")\""
+    for s in "${steps_claude[@]}"; do
+      IFS='|' read -r tool arg out <<<"$s"
+      sleep "$pause"
+      printf '%s⏺%s %s%s%s(%s)\n  %s⎿  %s%s\n' "$green" "$r" "$bold" "$tool" "$r" "$arg" "$dim" "$out" "$r"
+      emit PreToolUse ",\"tool_name\":\"$tool\",\"tool_input\":{\"command\":\"$(json "$arg")\"}"
+    done
+    if (( ask )); then
+      sleep "$pause"
+      printf '\n%s Bash command%s\n   npm test -- lists\n Do you want to proceed?\n %s❯ 1. Yes%s\n   2. No\n' "$bold" "$r" "$green" "$r"
+      emit PermissionRequest ',"tool_name":"Bash","tool_input":{"command":"npm test -- lists"}'
+      emit Notification ',"notification_type":"permission_prompt","message":"Claude needs your permission"'
+      read -rsn1 _
+      printf '%s⏺%s Bash(npm test -- lists)\n  %s⎿  ✓ 18 passed (1.4s)%s\n' "$green" "$r" "$dim" "$r"
+      emit PostToolUse ',"tool_name":"Bash","tool_input":{"command":"npm test -- lists"}'
+    fi
+    sleep "$pause"
+    local msg="Done — the endpoint now takes ?cursor and ?limit. Tests pass."
+    printf '\n⏺ %s\n\n' "$msg"
+    emit Stop ",\"last_assistant_message\":\"$(json "$msg")\""
+  else
+    printf '%s%s%s\n\n' "$bold" "$prompt" "$r"
+    emit prompt prompt="$prompt"
+    for s in "${steps_pi[@]}"; do
+      IFS='|' read -r tool arg out <<<"$s"
+      sleep "$pause"
+      printf '%s%s%s %s\n  %s%s%s\n' "$purple" "$tool" "$r" "$arg" "$dim" "$out" "$r"
+      emit tool activity="$tool $arg"
+    done
+    sleep "$pause"
+    if (( ask )); then
+      local q="Should cached books expire after 7 days?"
+      printf '\n%s (y/n)\n' "$q"
+      emit input detail="$q"
+      read -rsn1 _
+      emit resume_work
+      sleep "$pause"
+    fi
+    local msg="Book details are now cached and shown instantly when offline."
+    printf '\n%s\n\n' "$msg"
+    emit stop detail="$msg"
+  fi
+}
+
+for p in "$@"; do turn "$p"; done
+while true; do
+  printf '%s>%s ' "$dim" "$r"
+  IFS= read -r next || break
+  [[ $next == /exit || $next == exit ]] && break
+  [[ -n $next ]] && turn "$next"
+done
+if [[ $kind == claude ]]; then emit SessionEnd ',"reason":"prompt_input_exit"'; else emit end; fi

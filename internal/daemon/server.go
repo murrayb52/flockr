@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/murrayb52/flock/internal/config"
 	"github.com/murrayb52/flock/internal/protocol"
 )
 
@@ -20,7 +21,7 @@ var ErrRunning = errors.New("flock daemon is already running")
 // Listen opens the Unix socket, refusing if a live daemon answers on it and
 // replacing a stale socket file otherwise.
 func Listen(path string) (net.Listener, error) {
-	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+	if err := config.PrivateDir(filepath.Dir(path)); err != nil {
 		return nil, err
 	}
 	if c, err := net.DialTimeout("unix", path, 200*time.Millisecond); err == nil {

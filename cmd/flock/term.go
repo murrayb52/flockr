@@ -19,10 +19,10 @@ func tmuxConfig() string { return tmux.Config(userTmuxConf()) }
 // writeTmuxConf writes the generated config next to the socket and returns its path.
 func writeTmuxConf(cfg config.Config) (string, error) {
 	path := filepath.Join(filepath.Dir(cfg.Socket), "tmux.conf")
-	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+	if err := config.PrivateDir(filepath.Dir(path)); err != nil {
 		return "", err
 	}
-	return path, os.WriteFile(path, []byte(tmuxConfig()), 0o600)
+	return path, config.WriteFileAtomic(path, []byte(tmuxConfig()), 0o600)
 }
 
 func inFlockTmux(cfg config.Config) bool {

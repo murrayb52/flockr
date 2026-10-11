@@ -44,23 +44,25 @@ type Daemon struct {
 	home  string
 	hints tmux.Hints
 
-	mu         sync.Mutex
-	agents     *agents.Table
-	panes      map[string]tmux.Pane // by session
-	tree       *i3.Node
-	infos      []i3.Workspace
-	snap       model.Snapshot
-	snapJSON   []byte
-	subs       map[chan []byte]struct{}
-	condensed  bool
-	focusedID  int64
-	headers    map[string]map[string]string // session → last options pushed
-	urgent     map[int64]bool               // xid → urgency hint set
-	popups     map[string]bool              // session → notes popup open
-	gap        int                          // current left gap (px), -1 unknown
-	sidebarReq [2]int64                     // last requested sidebar width/height
-	launched   bool
-	dirty      chan struct{}
+	mu            sync.Mutex
+	agents        *agents.Table
+	panes         map[string]tmux.Pane // by session
+	tree          *i3.Node
+	infos         []i3.Workspace
+	snap          model.Snapshot
+	snapJSON      []byte
+	subs          map[chan []byte]struct{}
+	condensed     bool
+	focusedID     int64
+	headers       map[string]map[string]string // session → last options pushed
+	urgent        map[int64]bool               // xid → urgency hint set
+	popups        map[string]bool              // session → notes popup open
+	agentCmd      map[string]string            // pane → its foreground command while the agent runs
+	gap           int                          // current left gap (px), -1 unknown
+	sidebarReq    [2]int64                     // last requested sidebar width/height
+	sidebarStyled i3.NodeID                    // sidebar con already given border/sticky
+	launched      bool
+	dirty         chan struct{}
 }
 
 func New(cfg config.Config, deps Deps) *Daemon {
@@ -70,16 +72,17 @@ func New(cfg config.Config, deps Deps) *Daemon {
 	home, _ := os.UserHomeDir()
 	return &Daemon{
 		cfg: cfg, d: deps, home: home,
-		store:   sessions.Store{Dir: filepath.Join(cfg.DataDir, "sessions")},
-		hints:   tmux.Hints{Label: cfg.LabelKey, Notes: cfg.NotesKey},
-		agents:  agents.New(),
-		panes:   map[string]tmux.Pane{},
-		subs:    map[chan []byte]struct{}{},
-		headers: map[string]map[string]string{},
-		urgent:  map[int64]bool{},
-		popups:  map[string]bool{},
-		gap:     -1,
-		dirty:   make(chan struct{}, 1),
+		store:    sessions.Store{Dir: filepath.Join(cfg.DataDir, "sessions")},
+		hints:    tmux.Hints{Label: cfg.LabelKey, Notes: cfg.NotesKey},
+		agents:   agents.New(),
+		panes:    map[string]tmux.Pane{},
+		subs:     map[chan []byte]struct{}{},
+		headers:  map[string]map[string]string{},
+		urgent:   map[int64]bool{},
+		popups:   map[string]bool{},
+		agentCmd: map[string]string{},
+		gap:      -1,
+		dirty:    make(chan struct{}, 1),
 	}
 }
 
@@ -155,7 +158,17 @@ func (d *Daemon) syncPanes(panes []tmux.Pane) {
 	}
 	for _, pane := range d.agents.Panes() {
 		p, ok := byID[pane]
-		if !ok || isShell(p.Command) {
+		if !ok {
+			d.endAgent(pane)
+			continue
+		}
+		// An agent that died without saying so leaves its pane back at a shell.
+		// Compare with the command seen while it ran, so agents that are
+		// themselves started through a shell script are not mistaken for dead.
+		started, known := d.agentCmd[pane]
+		if !known {
+			d.agentCmd[pane] = p.Command
+		} else if p.Command != started && isShell(p.Command) {
 			d.endAgent(pane)
 		}
 	}
@@ -199,6 +212,7 @@ func (d *Daemon) saveRecord(a *model.Agent) {
 }
 
 func (d *Daemon) endAgent(pane string) {
+	delete(d.agentCmd, pane)
 	if !d.agents.Clear(pane) {
 		return
 	}
@@ -349,6 +363,12 @@ func (d *Daemon) HandleEvent(ev agents.Event) {
 	d.mu.Lock()
 	ch := d.agents.Apply(ev, d.d.Now(), d.paneFocused)
 	a := d.agents.Get(ev.Pane)
+	if ch.Started {
+		delete(d.agentCmd, ev.Pane)
+	}
+	if ch.Ended {
+		delete(d.agentCmd, ev.Pane)
+	}
 	if ch.Started && a != nil {
 		rec := d.store.Load(a.Kind, a.SessionID)
 		a.Label, a.Notes = rec.Label, rec.Notes

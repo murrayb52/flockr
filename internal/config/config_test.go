@@ -1,8 +1,10 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -71,5 +73,45 @@ func TestTerminalCommand(t *testing.T) {
 		if got != want {
 			t.Errorf("%s: got %q want %q", term, got, want)
 		}
+	}
+}
+
+func TestRuntimeFallbackIsPerUser(t *testing.T) {
+	t.Setenv("XDG_RUNTIME_DIR", "")
+	if got := RuntimeDir(); !strings.HasSuffix(got, fmt.Sprintf("flock-%d", os.Getuid())) {
+		t.Errorf("fallback = %q", got)
+	}
+}
+
+func TestPrivateDirRefusesOpenDirectories(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), "rt")
+	if err := PrivateDir(dir); err != nil {
+		t.Fatal(err)
+	}
+	os.Chmod(dir, 0o777)
+	if err := PrivateDir(dir); err == nil {
+		t.Error("a world-writable runtime dir must be refused")
+	}
+	link := filepath.Join(t.TempDir(), "link")
+	os.Symlink(t.TempDir(), link)
+	if err := PrivateDir(link); err == nil {
+		t.Error("a symlinked runtime dir must be refused")
+	}
+}
+
+func TestWriteFileAtomicReplacesSymlinks(t *testing.T) {
+	dir := t.TempDir()
+	target := filepath.Join(dir, "victim")
+	os.WriteFile(target, []byte("keep"), 0o600)
+	p := filepath.Join(dir, "tmux.conf")
+	os.Symlink(target, p)
+	if err := WriteFileAtomic(p, []byte("new"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if b, _ := os.ReadFile(target); string(b) != "keep" {
+		t.Error("the symlink target must not be written through")
+	}
+	if fi, _ := os.Lstat(p); fi.Mode()&os.ModeSymlink != 0 {
+		t.Error("the symlink should have been replaced by a file")
 	}
 }

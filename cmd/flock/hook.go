@@ -1,12 +1,14 @@
 package main
 
 import (
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
+	"github.com/murrayb52/flock/internal/agents"
 	"github.com/murrayb52/flock/internal/config"
 	"github.com/murrayb52/flock/internal/hook"
 	"github.com/murrayb52/flock/internal/protocol"
@@ -42,4 +44,37 @@ func runHook(args []string) {
 		socket = cfg.Socket
 	}
 	protocol.Call(socket, protocol.Request{Op: protocol.OpEvent, Event: &ev}, 300*time.Millisecond)
+}
+
+// runEvent reports an agent event from a script or another harness.
+func runEvent(cfg config.Config, args []string) error {
+	if len(args) < 2 {
+		return fmt.Errorf("usage: flock event AGENT NAME session=ID [prompt=…] [detail=…] [activity=…] [source=…]")
+	}
+	ev := agents.Event{Agent: args[0], Name: args[1], Pane: os.Getenv("TMUX_PANE")}
+	for _, kv := range args[2:] {
+		k, v, ok := strings.Cut(kv, "=")
+		if !ok {
+			return fmt.Errorf("expected key=value, got %q", kv)
+		}
+		switch k {
+		case "session":
+			ev.SessionID = v
+		case "prompt":
+			ev.Prompt = hook.Trim(v, 200)
+		case "detail":
+			ev.Detail = hook.Trim(v, 160)
+		case "activity":
+			ev.Activity = hook.Trim(v, 80)
+		case "source":
+			ev.Source = v
+		default:
+			return fmt.Errorf("unknown field %q", k)
+		}
+	}
+	if ev.Pane == "" || ev.SessionID == "" {
+		return fmt.Errorf("run inside a flock terminal and pass session=ID")
+	}
+	_, err := protocol.Call(cfg.Socket, protocol.Request{Op: protocol.OpEvent, Event: &ev}, time.Second)
+	return err
 }

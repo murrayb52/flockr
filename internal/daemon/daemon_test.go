@@ -102,7 +102,7 @@ func (f *fakeNotifier) Notify(k, t, b string, c bool) error {
 	f.shown = append(f.shown, note{k, t, b, c})
 	return nil
 }
-func (f *fakeNotifier) Close(k string)          { f.closed = append(f.closed, k) }
+func (f *fakeNotifier) Close(k string)         { f.closed = append(f.closed, k) }
 func (f *fakeNotifier) Actions() <-chan string { return nil }
 
 type fakeUrg map[int64]bool
@@ -118,9 +118,11 @@ func fixture(t *testing.T) (*Daemon, *fakeWM, *fakeMux, *fakeNotifier, fakeUrg) 
 	ff := &i3.Node{ID: 13, Window: 1300, Name: "x — Mozilla Firefox", WindowProperties: i3.WindowProperties{Class: "firefox"}, Focused: true}
 	stack := &i3.Node{ID: 10, Layout: i3.Stacked, Nodes: []*i3.Node{api, mob}, Focus: []i3.NodeID{11, 12}}
 	ws1 := &i3.Node{ID: 2, Type: i3.WorkspaceNode, Name: "1:WellRead", Layout: i3.SplitH, Nodes: []*i3.Node{stack, ff}, Focus: []i3.NodeID{13, 10}}
-	root := &i3.Node{Type: i3.Root, Nodes: []*i3.Node{{Type: i3.OutputNode, Name: "eDP-1", Nodes: []*i3.Node{{Name: "content", Nodes: []*i3.Node{ws1}}}}}}
-	wm := &fakeWM{root: root, infos: []i3.Workspace{{Num: 1, Name: "1:WellRead", Focused: true, Visible: true,
-		Rect: i3.Rect{X: 0, Y: 28, Width: 1920, Height: 1052}}}}
+	root := &i3.Node{Type: i3.Root, Nodes: []*i3.Node{{Type: i3.OutputNode, Name: "eDP-1", Rect: i3.Rect{X: 0, Y: 0, Width: 1920, Height: 1080},
+		Nodes: []*i3.Node{{Name: "content", Nodes: []*i3.Node{ws1}}}}}}
+	// i3 reports the workspace rect inside the gap flock adds (x=280 here)
+	wm := &fakeWM{root: root, infos: []i3.Workspace{{Num: 1, Name: "1:WellRead", Focused: true, Visible: true, Output: "eDP-1",
+		Rect: i3.Rect{X: 280, Y: 28, Width: 1640, Height: 1052}}}}
 	mux := &fakeMux{panes: []tmux.Pane{
 		{Session: "s1", ID: "%1", Cwd: "/home/u/code/api", Command: "claude"},
 		{Session: "s2", ID: "%2", Cwd: "/home/u/code/app", Command: "node"},
@@ -291,10 +293,22 @@ func TestSlotCommand(t *testing.T) {
 func TestAgentClearedWhenPaneReturnsToShell(t *testing.T) {
 	d, _, mux, _, _ := fixture(t)
 	d.HandleEvent(ev("start", "%1", "a"))
+	d.Refresh() // records "claude" as the running command
 	mux.panes[0].Command = "zsh"
 	d.Refresh()
 	if agentOf(d, "%1") != nil {
 		t.Error("agent should be cleared once its pane is back at a shell")
+	}
+}
+
+func TestAgentRunByAShellScriptIsKept(t *testing.T) {
+	d, _, mux, _, _ := fixture(t)
+	mux.panes[0].Command = "bash" // tmux reports a script by its interpreter
+	d.HandleEvent(ev("start", "%1", "a"))
+	d.Refresh()
+	d.Refresh()
+	if agentOf(d, "%1") == nil {
+		t.Error("an agent whose process looks like a shell from the start must not be cleared")
 	}
 }
 
@@ -304,8 +318,8 @@ func TestSidebarDockedAndGapMatchesRealWidth(t *testing.T) {
 		Rect: i3.Rect{X: 500, Y: 500, Width: 300, Height: 300}}
 	wm.root.Nodes[0].Nodes[0].Nodes[0].FloatingNodes = []*i3.Node{{Type: i3.FloatingCon, Nodes: []*i3.Node{side}}}
 	d.Refresh()
-	if got := wm.took("con_id=99"); len(got) != 2 || got[0] != "[con_id=99] move absolute position 0 px 28 px" ||
-		got[1] != "[con_id=99] resize set 280 px 1052 px" {
+	if got := wm.took("con_id=99"); len(got) != 5 || got[2] != "[con_id=99] border none" ||
+		got[3] != "[con_id=99] move absolute position 0 px 28 px" || got[4] != "[con_id=99] resize set 280 px 1052 px" {
 		t.Fatalf("placement = %v", got)
 	}
 	side.Rect = i3.Rect{X: 0, Y: 28, Width: 283, Height: 1050} // snapped by the terminal
@@ -314,7 +328,7 @@ func TestSidebarDockedAndGapMatchesRealWidth(t *testing.T) {
 		t.Fatalf("gaps = %v", got)
 	}
 	d.Refresh()
-	if got := wm.took("con_id=99"); len(got) != 2 {
+	if got := wm.took("con_id=99"); len(got) != 5 {
 		t.Errorf("no repeated placement once settled: %v", got)
 	}
 	d.Command([]string{"sidebar", "toggle"})
