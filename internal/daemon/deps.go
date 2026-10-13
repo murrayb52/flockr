@@ -36,6 +36,3 @@ type Notifier interface {
 type Urgency interface {
 	Set(xid int64, on bool) error
 }
-
-// Launcher starts a detached shell command (used to open the sidebar terminal).
-type Launcher func(shellCmd string) error

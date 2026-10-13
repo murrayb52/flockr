@@ -44,8 +44,6 @@ ty "add the index on lists.user_id"; k Return; sleep 0.4
 k Up; sleep 0.6; k space; sleep 2.5; k Escape
 sleep 1.5
 k super+u; sleep 2       # next: the Pi agent that finished while I was busy
-k super+b; sleep 2.2     # condense the sidebar
-k super+b; sleep 1.5
 k super+2; sleep 2.5     # the other project's agent is done too
 kill -INT $rec; wait $rec || true
 

@@ -1,5 +1,5 @@
 // Package ui is the shared visual vocabulary: names, icon tiles, status logos
-// and colours used by the sidebar, the bar and the tmux header.
+// and colours used by the bar and the tmux header.
 package ui
 
 import (
@@ -12,7 +12,7 @@ import (
 	"github.com/murrayb52/flockr/internal/model"
 )
 
-// Palette (matches the approved mockup and the user's i3 colours).
+// Palette (matches the user's i3 colours).
 const (
 	ColText   = "#f3f4f5"
 	ColDim    = "#676E7D"
@@ -22,8 +22,6 @@ const (
 	ColRed    = "#E53935"
 	ColAmber  = "#f0b429"
 	ColBlue   = "#8ea0c8"
-	ColBG     = "#14171c"
-	ColRowBG  = "#22352b"
 )
 
 var Spinner = []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}

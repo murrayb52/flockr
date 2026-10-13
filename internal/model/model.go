@@ -1,5 +1,5 @@
 // Package model holds the types shared by the daemon and its clients
-// (sidebar, bar, notes editor). Snapshots travel over the socket as JSON.
+// (bar, notes editor, status). Snapshots travel over the socket as JSON.
 package model
 
 import "time"
@@ -53,14 +53,13 @@ type Term struct {
 	Agent   *Agent `json:"agent,omitempty"`
 }
 
-// Window is an i3 window as the sidebar shows it.
+// Window is an i3 window, linked to its flockr terminal if it is one.
 type Window struct {
 	ConID   int64  `json:"con_id"`
 	XID     int64  `json:"xid"`
 	Class   string `json:"class"`
 	Title   string `json:"title"`
-	App     string `json:"app"`  // normalised app key, e.g. "firefox", "term"
-	Slot    int    `json:"slot"` // 1-based position inside a stack/tabs container, 0 otherwise
+	App     string `json:"app"` // normalised app key, e.g. "firefox", "term"
 	Focused bool   `json:"focused"`
 	Visible bool   `json:"visible"`
 	Term    *Term  `json:"term,omitempty"`
@@ -77,6 +76,7 @@ type Group struct {
 type Workspace struct {
 	Num     int64   `json:"num"`
 	Name    string  `json:"name"` // display name without the "N:" prefix
+	WSLabel string  `json:"ws_label,omitempty"` // user-set label, separate from i3's name
 	Focused bool    `json:"focused"`
 	Visible bool    `json:"visible"`
 	Urgent  bool    `json:"urgent"`
@@ -96,10 +96,7 @@ func (w Workspace) Windows() []Window {
 // Snapshot is the full state the daemon broadcasts on every change.
 type Snapshot struct {
 	Workspaces []Workspace `json:"workspaces"`
-	Condensed  bool        `json:"condensed"`
-	Font       float64     `json:"font,omitempty"`       // sidebar font size (points)
-	Muted      bool        `json:"muted,omitempty"`      // desktop notifications off
-	TermsOnly  bool        `json:"terms_only,omitempty"` // sidebar lists only flockr terminals
+	Muted      bool        `json:"muted,omitempty"` // desktop notifications off
 	Now        time.Time   `json:"now"`
 }
 

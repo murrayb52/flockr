@@ -8,25 +8,20 @@ import (
 	"github.com/murrayb52/flockr/internal/config"
 )
 
-// settings are choices made from the sidebar's menu, kept apart from the
-// user's config file so flockr never rewrites it.
+// settings are choices made at run time (`flockr notifications`), kept apart
+// from the user's config file so flockr never rewrites it.
 type settings struct {
-	SidebarFont   float64 `json:"sidebar_font_size,omitempty"`
-	Notifications *bool   `json:"notifications,omitempty"`
-	TermsOnly     bool    `json:"terms_only,omitempty"` // sidebar lists only flockr terminals
+	Notifications *bool `json:"notifications,omitempty"`
 }
 
 func settingsPath(cfg config.Config) string { return filepath.Join(cfg.DataDir, "settings.json") }
 
-// loadSettings returns the menu's saved choices, falling back to the config
-// file's font size and notification switch.
+// loadSettings returns the saved choices, falling back to the config file's
+// notification switch.
 func loadSettings(cfg config.Config) settings {
 	var s settings
 	if b, err := os.ReadFile(settingsPath(cfg)); err == nil {
 		json.Unmarshal(b, &s)
-	}
-	if s.SidebarFont <= 0 {
-		s.SidebarFont = cfg.SidebarFont
 	}
 	if s.Notifications == nil {
 		on := cfg.Notifications
@@ -35,13 +30,13 @@ func loadSettings(cfg config.Config) settings {
 	return s
 }
 
-// saveSettings writes the current menu choices (called with d.mu held).
+// saveSettings writes the current choices (called with d.mu held).
 func (d *Daemon) saveSettings() error {
 	if err := os.MkdirAll(d.cfg.DataDir, 0o700); err != nil {
 		return err
 	}
 	on := d.notifyOn
-	b, _ := json.Marshal(settings{SidebarFont: d.font, Notifications: &on, TermsOnly: d.termsOnly})
+	b, _ := json.Marshal(settings{Notifications: &on})
 	return config.WriteFileAtomic(settingsPath(d.cfg), b, 0o600)
 }
 
@@ -66,26 +61,23 @@ func (d *Daemon) setNotifications(v string) error {
 	return nil
 }
 
-// setFilter chooses what the sidebar lists: "all" windows, flockr "terms"
-// only, or "toggle".
-func (d *Daemon) setFilter(v string) error {
-	d.mu.Lock()
-	defer d.mu.Unlock()
-	switch v {
-	case "all":
-		d.termsOnly = false
-	case "terms":
-		d.termsOnly = true
-	case "toggle":
-		d.termsOnly = !d.termsOnly
-	default:
-		return errUsage("sidebar filter all|terms|toggle")
+func wsLabelsPath(cfg config.Config) string { return filepath.Join(cfg.DataDir, "workspace-labels.json") }
+
+func loadWSLabels(cfg config.Config) map[int64]string {
+	m := map[int64]string{}
+	b, err := os.ReadFile(wsLabelsPath(cfg))
+	if err == nil {
+		json.Unmarshal(b, &m)
 	}
-	if err := d.saveSettings(); err != nil {
+	return m
+}
+
+func (d *Daemon) saveWSLabels() error {
+	if err := os.MkdirAll(d.cfg.DataDir, 0o700); err != nil {
 		return err
 	}
-	d.rebuild()
-	return nil
+	b, _ := json.Marshal(d.wsLabels)
+	return config.WriteFileAtomic(wsLabelsPath(d.cfg), b, 0o600)
 }
 
 type errUsage string

@@ -83,8 +83,8 @@ func TestSplitOfTwoStacks(t *testing.T) {
 		t.Errorf("apps = %v %v", names(g.Groups[0]), names(g.Groups[1]))
 	}
 	l := g.Groups[0].Windows
-	if l[0].Slot != 1 || l[2].Slot != 3 || l[0].Term != terms["a1"] {
-		t.Errorf("slots/terms wrong: %+v", l)
+	if l[0].Term != terms["a1"] {
+		t.Errorf("terms wrong: %+v", l)
 	}
 	if l[0].Visible || !l[1].Visible || !l[1].Focused || l[2].Visible {
 		t.Errorf("only the focused stack member is visible: %+v", l)
@@ -118,9 +118,6 @@ func TestLoneWindowsSideBySide(t *testing.T) {
 	var labels []string
 	for _, g := range got.Groups {
 		labels = append(labels, g.Label)
-		if g.Windows[0].Slot != 0 {
-			t.Error("windows outside stacks have no slot")
-		}
 	}
 	if !reflect.DeepEqual(labels, []string{"left", "middle", "right"}) {
 		t.Errorf("labels = %v", labels)
@@ -139,12 +136,11 @@ func TestNestedSplitAndVertical(t *testing.T) {
 	}
 }
 
-func TestFloatingAndSidebarAndEmpty(t *testing.T) {
+func TestFloatingAndEmpty(t *testing.T) {
 	a := win("Alacritty", "a")
 	w := ws(5, "5", i3.SplitH, a)
 	fl := win("Pavucontrol", "Volume")
-	side := win("flockr-sidebar", "sidebar")
-	w.FloatingNodes = []*i3.Node{{Type: i3.FloatingCon, Nodes: []*i3.Node{fl}}, {Type: i3.FloatingCon, Nodes: []*i3.Node{side}}}
+	w.FloatingNodes = []*i3.Node{{Type: i3.FloatingCon, Nodes: []*i3.Node{fl}}}
 	empty := ws(6, "6:Empty", i3.SplitH)
 	got := Build(root(w, empty), []i3.Workspace{{Num: 5, Name: "5"}, {Num: 6, Name: "6:Empty"}}, nil)
 	if len(got[0].Groups) != 2 || got[0].Groups[1].Label != "floating" || len(got[0].Groups[1].Windows) != 1 {

@@ -1,5 +1,5 @@
-// Package i3tree turns i3's layout tree into the workspace/group/window view the
-// sidebar shows, and plans the i3 commands for flockr's window-moving helpers.
+// Package i3tree turns i3's layout tree into flockr's workspace/group/window
+// view, linking flockr terminals to their windows.
 package i3tree
 
 import (
@@ -9,9 +9,6 @@ import (
 	"github.com/murrayb52/flockr/internal/model"
 	"go.i3wm.org/i3/v4"
 )
-
-// SidebarClass is the WM class of flockr's own sidebar window; it is never listed.
-const SidebarClass = "flockr-sidebar"
 
 // Build lists the real workspaces (scratchpad excluded) in tree order.
 // infos supplies focus/visibility/urgency from GET_WORKSPACES; terms maps a
@@ -61,10 +58,7 @@ func workspace(n *i3.Node, info i3.Workspace, terms map[string]*model.Term) mode
 	var floating []model.Window
 	for _, f := range n.FloatingNodes {
 		for _, leaf := range leaves(f) {
-			if leaf.WindowProperties.Class == SidebarClass {
-				continue
-			}
-			floating = append(floating, b.window(leaf, 0, true))
+			floating = append(floating, b.window(leaf, true))
 		}
 	}
 	if len(floating) > 0 {
@@ -78,17 +72,17 @@ type builder struct {
 	wsVisible bool
 }
 
-// group collects the leaf windows under n. When n is a stack/tabs container its
-// children get slot numbers and only its focused child is visible.
+// group collects the leaf windows under n. In a stack/tabs container only the
+// focused child is visible.
 func (b builder) group(n *i3.Node, label string, onTop bool) model.Group {
 	g := model.Group{Label: label, Layout: string(n.Layout)}
 	if n.Window != 0 {
 		g.Layout = "window"
 	}
-	var add func(n *i3.Node, slot int, visible bool)
-	add = func(n *i3.Node, slot int, visible bool) {
+	var add func(n *i3.Node, visible bool)
+	add = func(n *i3.Node, visible bool) {
 		if n.Window != 0 {
-			w := b.window(n, slot, visible && b.wsVisible)
+			w := b.window(n, visible && b.wsVisible)
 			if w.Focused {
 				g.Focused = true
 			}
@@ -96,28 +90,21 @@ func (b builder) group(n *i3.Node, label string, onTop bool) model.Group {
 			return
 		}
 		stacked := n.Layout == i3.Stacked || n.Layout == i3.Tabbed
-		for i, c := range n.Nodes {
-			s, v := slot, visible
-			if stacked {
-				v = visible && isFocusChild(n, c)
-				if slot == 0 && len(n.Nodes) > 1 {
-					s = i + 1
-				}
-			}
-			add(c, s, v)
+		for _, c := range n.Nodes {
+			add(c, visible && (!stacked || isFocusChild(n, c)))
 		}
 	}
-	add(n, 0, true)
+	add(n, true)
 	if !g.Focused && onTop && n.Focused {
 		g.Focused = true
 	}
 	return g
 }
 
-func (b builder) window(n *i3.Node, slot int, visible bool) model.Window {
+func (b builder) window(n *i3.Node, visible bool) model.Window {
 	class := n.WindowProperties.Class
 	w := model.Window{ConID: int64(n.ID), XID: n.Window, Class: class, Title: n.Name,
-		App: AppKey(class), Slot: slot, Focused: n.Focused, Visible: visible}
+		App: AppKey(class), Focused: n.Focused, Visible: visible}
 	if id := SessionFromTitle(n.Name); id != "" {
 		if t, ok := b.terms[id]; ok {
 			w.App, w.Term = "term", t

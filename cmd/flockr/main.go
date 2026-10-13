@@ -14,7 +14,7 @@ import (
 
 var version = "dev"
 
-const usage = `flockr — a sidebar, labels, notes and notifications for CLI agents in i3
+const usage = `flockr — labels, notes and notifications for CLI agents in i3
 
 Usage:
   flockr daemon                 run the daemon (start it from your i3 config)
@@ -23,13 +23,11 @@ Usage:
   flockr uninstall claude|pi|all
 
 Bindings (call these from i3):
-  flockr sidebar [toggle|condense|expand|show|font +1|-1|SIZE|filter all|terms|toggle]
   flockr notifications [on|off|toggle]
   flockr label                  name the focused terminal or agent
+  flockr wslabel [LABEL]        name the focused workspace (stored separately from i3)
   flockr notes                  open/close the focused agent's notes
   flockr next                   focus the next agent that needs you
-  flockr slot N                 move the focused window to position N in its stack
-  flockr jump CON_ID            focus a window
 
 Other agents:
   flockr event AGENT NAME session=ID [prompt=…] [detail=…] [activity=…] [source=…]
@@ -70,12 +68,7 @@ func run(args []string) error {
 		return runDaemon(cfg)
 	case "term":
 		return runTerm(cfg, args[1:])
-	case "sidebar":
-		if len(args) == 1 || args[1] == "--menu" {
-			return runSidebar(cfg, len(args) > 1)
-		}
-		return command(cfg, args...)
-	case "label", "notes", "next", "slot", "jump", "refresh", "notifications":
+	case "label", "wslabel", "notes", "next", "refresh", "notifications":
 		return command(cfg, args...)
 	case "event":
 		return runEvent(cfg, args[1:])

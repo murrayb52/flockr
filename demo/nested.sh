@@ -32,7 +32,7 @@ start() {
   cp "$repo/demo/fakeagent" "$work/bin/"
   [[ -d $HOME/.config/alacritty ]] && cp -r "$HOME/.config/alacritty/." "$work/config/alacritty/" || true
   [[ -f $HOME/.config/dunst/dunstrc ]] && cp "$HOME/.config/dunst/dunstrc" "$work/config/dunst/" || true
-  printf 'terminal = "alacritty"\nsidebar_terminal = "alacritty"\n' > "$work/config/flockr/config.toml"
+  printf 'terminal = "alacritty"\n' > "$work/config/flockr/config.toml"
 
   # the example snippet, with the daemon's log captured
   sed "s|exec_always --no-startup-id flockr daemon|exec_always --no-startup-id flockr daemon 2>>$work/daemon.log|" \
@@ -41,6 +41,7 @@ start() {
 set \$mod Mod4
 ipc-socket $work/run/i3.sock
 include $work/config/i3/flockr.conf
+workspace_layout tabbed
 for_window [class=".*"] border pixel 3
 bindsym \$mod+Up focus up
 bindsym \$mod+Down focus down

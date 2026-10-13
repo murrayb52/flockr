@@ -35,10 +35,9 @@ func runDaemon(cfg config.Config) error {
 		(tmux.Client{Socket: cfg.TmuxSocket}).Source(conf)
 	}
 	deps := daemon.Deps{
-		WM:     daemon.I3{},
-		Mux:    tmux.Client{Socket: cfg.TmuxSocket},
-		Bin:    binPath(),
-		Launch: launch,
+		WM:  daemon.I3{},
+		Mux: tmux.Client{Socket: cfg.TmuxSocket},
+		Bin: binPath(),
 	}
 	if n, err := notify.New(); err == nil {
 		deps.Notifier = n
@@ -63,7 +62,7 @@ func runDaemon(cfg config.Config) error {
 	return nil
 }
 
-// launch starts a shell command detached from the daemon (new session, no stdio).
+// launch starts a shell command detached from flockr (new session, no stdio).
 func launch(shellCmd string) error {
 	cmd := exec.Command("/bin/sh", "-c", shellCmd)
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}

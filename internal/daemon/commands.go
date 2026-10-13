@@ -3,15 +3,13 @@ package daemon
 import (
 	"fmt"
 	"log"
-	"strconv"
+	"os/exec"
 	"strings"
 
-	"github.com/murrayb52/flockr/internal/i3tree"
 	"github.com/murrayb52/flockr/internal/model"
 	"github.com/murrayb52/flockr/internal/protocol"
 	"github.com/murrayb52/flockr/internal/tmux"
 	"github.com/murrayb52/flockr/internal/ui"
-	"go.i3wm.org/i3/v4"
 )
 
 const notesHeight = 16 // most lines the notes drawer takes
@@ -26,7 +24,7 @@ func (d *Daemon) Command(args []string) protocol.Response {
 	r := d.command(args)
 	if !r.OK && len(args) > 0 && d.d.Notifier != nil {
 		switch args[0] {
-		case "label", "notes", "slot", "next":
+		case "label", "notes", "next":
 			if err := d.d.Notifier.Notify(hintKey, "flockr", r.Error, false); err != nil {
 				log.Printf("notify: %v", err)
 			}
@@ -40,51 +38,14 @@ func (d *Daemon) command(args []string) protocol.Response {
 		return fail("no command")
 	}
 	switch args[0] {
-	case "slot":
-		if len(args) < 2 {
-			return fail("usage: slot N")
-		}
-		n, err := strconv.Atoi(args[1])
-		if err != nil || n < 1 {
-			return fail("slot must be a number from 1")
-		}
-		return d.slot(n)
 	case "next":
 		return d.next()
-	case "jump":
-		if len(args) < 2 {
-			return fail("usage: jump CON_ID")
-		}
-		con, err := strconv.ParseInt(args[1], 10, 64)
-		if err != nil {
-			return fail("bad con id")
-		}
-		d.d.WM.Command(focusCmd(con))
-		d.markDirty()
-		return ok("")
 	case "label":
 		return d.label()
+	case "wslabel":
+		return d.wslabel(args[1:])
 	case "notes":
 		return d.notes()
-	case "sidebar":
-		sub := "toggle"
-		if len(args) > 1 {
-			sub = args[1]
-		}
-		if sub == "font" {
-			return d.fontCmd(args[2:])
-		}
-		if sub == "filter" {
-			v := "toggle"
-			if len(args) > 2 {
-				v = args[2]
-			}
-			if err := d.setFilter(v); err != nil {
-				return fail(err.Error())
-			}
-			return ok("")
-		}
-		return d.sidebar(sub)
 	case "notifications":
 		v := "toggle"
 		if len(args) > 1 {
@@ -103,33 +64,6 @@ func (d *Daemon) command(args []string) protocol.Response {
 
 func ok(msg string) protocol.Response   { return protocol.Response{OK: true, Message: msg} }
 func fail(msg string) protocol.Response { return protocol.Response{Error: msg} }
-
-func (d *Daemon) focusedNode() *i3.Node {
-	d.mu.Lock()
-	defer d.mu.Unlock()
-	if d.tree == nil {
-		return nil
-	}
-	return d.tree.FindChild(func(n *i3.Node) bool { return n.Focused && n.Window != 0 })
-}
-
-func (d *Daemon) slot(n int) protocol.Response {
-	node := d.focusedNode()
-	if node == nil {
-		return fail("no focused window")
-	}
-	d.mu.Lock()
-	cmds := i3tree.PlanSlot(d.tree, node.ID, n)
-	d.mu.Unlock()
-	if len(cmds) == 0 {
-		return ok("")
-	}
-	if err := d.d.WM.Command(cmds...); err != nil {
-		return fail(err.Error())
-	}
-	d.markDirty()
-	return ok("")
-}
 
 func (d *Daemon) next() protocol.Response {
 	d.mu.Lock()
@@ -175,6 +109,55 @@ func (d *Daemon) label() protocol.Response {
 	return ok("")
 }
 
+func (d *Daemon) wslabel(args []string) protocol.Response {
+	d.mu.Lock()
+	ws, found := d.snap.Current()
+	d.mu.Unlock()
+	if !found {
+		return fail("no focused workspace")
+	}
+	if len(args) > 0 {
+		label := strings.TrimSpace(strings.Join(args, " "))
+		d.mu.Lock()
+		if label == "" {
+			delete(d.wsLabels, ws.Num)
+		} else {
+			d.wsLabels[ws.Num] = label
+		}
+		d.mu.Unlock()
+		if err := d.saveWSLabels(); err != nil {
+			log.Printf("wslabel save: %v", err)
+		}
+		d.markDirty()
+		return ok("")
+	}
+	// No args: run rofi directly (no shell) in a goroutine so the daemon stays responsive.
+	current := d.wsLabels[ws.Num]
+	go func() {
+		args := []string{"-dmenu", "-l", "0", "-p", "label ›  "}
+		if current != "" {
+			args = append(args, "-filter", current)
+		}
+		out, err := exec.Command("rofi", args...).Output()
+		if err != nil {
+			return // Escape pressed or rofi not found
+		}
+		label := strings.TrimSpace(string(out))
+		d.mu.Lock()
+		if label == "" {
+			delete(d.wsLabels, ws.Num)
+		} else {
+			d.wsLabels[ws.Num] = label
+		}
+		d.mu.Unlock()
+		if err := d.saveWSLabels(); err != nil {
+			log.Printf("wslabel save: %v", err)
+		}
+		d.markDirty()
+	}()
+	return ok("")
+}
+
 func (d *Daemon) notes() protocol.Response {
 	w, found := d.focusedTerm()
 	if !found || w.Term.Agent == nil {
@@ -214,46 +197,4 @@ func (d *Daemon) notes() protocol.Response {
 
 func shellQuote(s string) string {
 	return "'" + strings.ReplaceAll(s, "'", `'\''`) + "'"
-}
-
-// fontCmd handles `sidebar font +1|-1|SIZE`.
-func (d *Daemon) fontCmd(args []string) protocol.Response {
-	if len(args) != 1 {
-		return fail("usage: sidebar font +N|-N|SIZE")
-	}
-	v, err := strconv.ParseFloat(args[0], 64)
-	if err != nil || v == 0 {
-		return fail("font size must be a number, or a step such as +1 or -1")
-	}
-	var size, step float64
-	if strings.HasPrefix(args[0], "+") || strings.HasPrefix(args[0], "-") {
-		step = v
-	} else {
-		size = v
-	}
-	if err := d.setFont(size, step); err != nil {
-		return fail(err.Error())
-	}
-	return ok("")
-}
-
-func (d *Daemon) sidebar(sub string) protocol.Response {
-	d.mu.Lock()
-	switch sub {
-	case "toggle":
-		d.condensed = !d.condensed
-	case "condense":
-		d.condensed = true
-	case "expand":
-		d.condensed = false
-	case "show":
-		d.launched = false
-	default:
-		d.mu.Unlock()
-		return fail("usage: sidebar toggle|condense|expand|show|font +1|-1|SIZE|filter all|terms|toggle")
-	}
-	d.rebuild()
-	d.mu.Unlock()
-	d.ensureSidebar()
-	return ok("")
 }

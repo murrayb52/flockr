@@ -129,7 +129,7 @@ func fixture(t *testing.T) (*Daemon, *fakeWM, *fakeMux, *fakeNotifier, fakeUrg) 
 	}}
 	n := &fakeNotifier{}
 	u := fakeUrg{}
-	cfg := config.Config{DataDir: t.TempDir(), Notifications: true, SidebarWidth: 280, RailWidth: 64, SidebarFont: 11, LabelKey: "Alt+/", NotesKey: "Alt+."}
+	cfg := config.Config{DataDir: t.TempDir(), Notifications: true, LabelKey: "Alt+/", NotesKey: "Alt+."}
 	d := New(cfg, Deps{WM: wm, Mux: mux, Notifier: n, Urgency: u, Bin: "/usr/bin/flockr",
 		Now: func() time.Time { return time.Date(2026, 10, 11, 12, 0, 0, 0, time.UTC) }})
 	d.Refresh()
@@ -178,7 +178,7 @@ func TestInputNotifiesAndRaisesUrgency(t *testing.T) {
 	if mux.opt("s1", "status") != "2" || !strings.Contains(mux.opt("s1", "@flockr_h2"), "notes [0/0]") {
 		t.Errorf("notes strip = %q", mux.opt("s1", "@flockr_h2"))
 	}
-	if mux.opt("s1", "@flockr_title") != "add pagination" {
+	if mux.opt("s1", "@flockr_title") != "! add pagination" {
 		t.Errorf("title = %q", mux.opt("s1", "@flockr_title"))
 	}
 }
@@ -277,19 +277,6 @@ func TestNextPrefersInputThenOldestDone(t *testing.T) {
 	}
 }
 
-func TestSlotCommand(t *testing.T) {
-	d, wm, _, _, _ := fixture(t)
-	wm.focus(12)
-	d.Refresh()
-	d.Command([]string{"slot", "1"})
-	if got := wm.took("move up"); len(got) != 1 || got[0] != "[con_id=12] move up" {
-		t.Errorf("cmds = %v", got)
-	}
-	if r := d.Command([]string{"slot", "x"}); r.OK {
-		t.Error("bad slot should fail")
-	}
-}
-
 func TestAgentClearedWhenPaneReturnsToShell(t *testing.T) {
 	d, _, mux, _, _ := fixture(t)
 	d.HandleEvent(ev("start", "%1", "a"))
@@ -309,120 +296,6 @@ func TestAgentRunByAShellScriptIsKept(t *testing.T) {
 	d.Refresh()
 	if agentOf(d, "%1") == nil {
 		t.Error("an agent whose process looks like a shell from the start must not be cleared")
-	}
-}
-
-func TestSidebarDockedAndGapMatchesRealWidth(t *testing.T) {
-	d, wm, _, _, _ := fixture(t)
-	side := &i3.Node{ID: 99, Window: 9900, Name: "sidebar", WindowProperties: i3.WindowProperties{Class: "flockr-sidebar"},
-		Rect: i3.Rect{X: 500, Y: 500, Width: 300, Height: 300}}
-	wm.root.Nodes[0].Nodes[0].Nodes[0].FloatingNodes = []*i3.Node{{Type: i3.FloatingCon, Nodes: []*i3.Node{side}}}
-	d.Refresh()
-	if got := wm.took("con_id=99"); len(got) != 5 || got[2] != "[con_id=99] border none" ||
-		got[3] != "[con_id=99] move absolute position 0 px 28 px" || got[4] != "[con_id=99] resize set 280 px 1052 px" {
-		t.Fatalf("placement = %v", got)
-	}
-	side.Rect = i3.Rect{X: 0, Y: 28, Width: 283, Height: 1050} // snapped by the terminal
-	d.Refresh()
-	if got := wm.took("gaps left"); len(got) != 1 || got[0] != "gaps left all set 283" {
-		t.Fatalf("gaps = %v", got)
-	}
-	wm.infos[0].Rect.X = 283 // i3 applied it
-	d.Refresh()
-	if got := wm.took("gaps left"); len(got) != 1 {
-		t.Fatalf("gap already right, nothing to do: %v", got)
-	}
-	wm.infos[0].Rect.X = 0 // something reset the gaps behind flockr's back
-	d.Refresh()
-	if got := wm.took("gaps left"); len(got) != 2 {
-		t.Fatalf("a reset gap must be restored: %v", got)
-	}
-	wm.infos[0].Rect.X = 283
-	d.Refresh()
-	if got := wm.took("con_id=99"); len(got) != 5 {
-		t.Errorf("no repeated placement once settled: %v", got)
-	}
-	d.Command([]string{"sidebar", "toggle"})
-	if got := wm.took("resize set 64 px"); len(got) != 1 || !d.Snapshot().Condensed {
-		t.Errorf("condense = %v", got)
-	}
-}
-
-func TestSidebarHiddenBehindFullscreenIsLeftAlone(t *testing.T) {
-	d, wm, _, _, _ := fixture(t)
-	side := &i3.Node{ID: 99, Window: 9900, Name: "sidebar", WindowProperties: i3.WindowProperties{Class: "flockr-sidebar"},
-		Rect: i3.Rect{X: 597, Y: 295, Width: 800, Height: 600}} // stale: not drawn
-	wm.root.Nodes[0].Nodes[0].Nodes[0].FloatingNodes = []*i3.Node{{Type: i3.FloatingCon,
-		Rect: i3.Rect{X: 0, Y: 28, Width: 280, Height: 1052}, Nodes: []*i3.Node{side}}}
-	for i := 0; i < 3; i++ {
-		d.Refresh()
-	}
-	if got := wm.took("con_id=99"); len(got) != 0 {
-		t.Errorf("no commands for a window i3 is not drawing: %v", got)
-	}
-	if got := wm.took("gaps left"); len(got) != 0 {
-		t.Errorf("gap from a stale width: %v", got)
-	}
-	select {
-	case <-d.dirty:
-		t.Error("must not ask for an immediate refresh (that loops)")
-	default:
-	}
-}
-
-func TestSidebarFontReopensAtNewSizeKeepingGap(t *testing.T) {
-	d, wm, _, _, _ := fixture(t)
-	var launched []string
-	d.d.Launch = func(c string) error { launched = append(launched, c); return nil }
-	d.cfg.SidebarTerminal = "alacritty"
-	side := &i3.Node{ID: 99, Window: 9900, Name: "sidebar", WindowProperties: i3.WindowProperties{Class: "flockr-sidebar"},
-		Rect: i3.Rect{X: 0, Y: 28, Width: 280, Height: 1052}}
-	floats := &wm.root.Nodes[0].Nodes[0].Nodes[0].FloatingNodes
-	*floats = []*i3.Node{{Type: i3.FloatingCon, Nodes: []*i3.Node{side}}}
-	d.Refresh()
-	d.Refresh()
-	if d.Snapshot().Font != 11 {
-		t.Fatalf("default font = %v", d.Snapshot().Font)
-	}
-	if r := d.Command([]string{"sidebar", "font", "-1"}); !r.OK {
-		t.Fatal(r.Error)
-	}
-	if got := wm.took("[con_id=99] kill"); len(got) != 1 || d.Snapshot().Font != 10 {
-		t.Fatalf("kill = %v, font = %v", got, d.Snapshot().Font)
-	}
-	*floats = nil // i3 closed it
-	d.Refresh()
-	d.Refresh()
-	if len(launched) != 1 || !strings.Contains(launched[0], "-o font.size=10 ") {
-		t.Fatalf("launched = %v", launched)
-	}
-	if got := wm.took("gaps left all set 0"); len(got) != 0 {
-		t.Errorf("the gap must survive the reopen: %v", got)
-	}
-	side2 := *side
-	side2.ID = 100
-	side2.Rect = i3.Rect{X: 0, Y: 28, Width: 800, Height: 600} // a fresh terminal's own size
-	*floats = []*i3.Node{{Type: i3.FloatingCon, Nodes: []*i3.Node{&side2}}}
-	d.Refresh()
-	if d.relaunch || d.launched {
-		t.Error("the new window has arrived")
-	}
-	if got := wm.took("[con_id=100] resize set 280 px"); len(got) != 1 {
-		t.Errorf("the reopened sidebar must be sized: %v", wm.took("con_id=100"))
-	}
-	// remembered across daemons, and clamped
-	d2 := New(d.cfg, d.d)
-	if d2.font != 10 {
-		t.Errorf("saved font = %v", d2.font)
-	}
-	d.Command([]string{"sidebar", "font", "2"})
-	if d.Snapshot().Font != minFont {
-		t.Errorf("clamped = %v", d.Snapshot().Font)
-	}
-	for _, bad := range [][]string{{"sidebar", "font"}, {"sidebar", "font", "big"}, {"sidebar", "font", "0"}} {
-		if r := d.Command(bad); r.OK {
-			t.Errorf("%v must fail", bad)
-		}
 	}
 }
 
@@ -448,23 +321,6 @@ func TestNotificationsSwitchIsSavedAndMutes(t *testing.T) {
 	}
 }
 
-func TestSidebarFilterIsSaved(t *testing.T) {
-	d, _, _, _, _ := fixture(t)
-	if r := d.Command([]string{"sidebar", "filter", "terms"}); !r.OK || !d.Snapshot().TermsOnly {
-		t.Fatalf("terms: %+v", r)
-	}
-	if d2 := New(d.cfg, d.d); !d2.termsOnly {
-		t.Error("the filter must survive a daemon restart")
-	}
-	d.Command([]string{"sidebar", "filter"})
-	if d.Snapshot().TermsOnly {
-		t.Error("no argument toggles")
-	}
-	if r := d.Command([]string{"sidebar", "filter", "some"}); r.OK {
-		t.Error("bad value must fail")
-	}
-}
-
 func TestFailedKeyCommandsSayWhy(t *testing.T) {
 	d, _, _, n, _ := fixture(t) // firefox has focus
 	if r := d.Command([]string{"label"}); r.OK {
@@ -473,7 +329,7 @@ func TestFailedKeyCommandsSayWhy(t *testing.T) {
 	if len(n.shown) != 1 || n.shown[0].key != hintKey || !strings.Contains(n.shown[0].body, "flockr terminals") {
 		t.Errorf("hint = %+v", n.shown)
 	}
-	d.Command([]string{"jump", "x"}) // not a key binding: no notification
+	d.Command([]string{"notifications", "loud"}) // not a key binding: no notification
 	if len(n.shown) != 1 {
 		t.Errorf("only key commands notify: %+v", n.shown)
 	}

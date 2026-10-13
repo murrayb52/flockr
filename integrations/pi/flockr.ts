@@ -1,6 +1,6 @@
 // flockr integration for Pi — installed by `flockr install pi`.
 // Reports agent state (working / needs input / done) to the flockr daemon so the
-// sidebar, notifications and terminal header can show it. It only activates
+// bar, notifications and terminal header can show it. It only activates
 // inside a flockr terminal and never blocks or fails Pi: every send has a short
 // timeout and errors are ignored.
 // FLOCKR_INTEGRATION_VERSION=1

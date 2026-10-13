@@ -6,7 +6,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"syscall"
 
@@ -17,16 +16,9 @@ type Config struct {
 	// Terminal that `flockr term` opens when started from a key binding: a
 	// known name, or a template containing {cmd}. Defaults to the system's
 	// default terminal ($TERMINAL, then x-terminal-emulator).
-	Terminal string `toml:"terminal"`
-	// Terminal for the sidebar window, which must be able to set its window
-	// class: alacritty, kitty, ghostty, wezterm, foot, xterm, or a template
-	// containing {class}, {cmd} and optionally {font}.
-	SidebarTerminal string  `toml:"sidebar_terminal"`
-	SidebarWidth    int     `toml:"sidebar_width"`     // pixels, expanded
-	RailWidth       int     `toml:"rail_width"`        // pixels, condensed
-	SidebarFont     float64 `toml:"sidebar_font_size"` // points; the sidebar's − + buttons override it
-	Notifications   bool    `toml:"notifications"`
-	Shell           string  `toml:"shell"` // shell started by `flockr term`; defaults to $SHELL
+	Terminal      string `toml:"terminal"`
+	Notifications bool   `toml:"notifications"`
+	Shell         string `toml:"shell"` // shell started by `flockr term`; defaults to $SHELL
 	// Key names shown in terminal headers; match them to your i3 bindings.
 	LabelKey string `toml:"label_key"`
 	NotesKey string `toml:"notes_key"`
@@ -51,16 +43,12 @@ func Path() string {
 
 func Load() (Config, error) {
 	c := Config{
-		Terminal:        defaultTerminal(),
-		SidebarTerminal: detectTerminal(),
-		SidebarWidth:    280,
-		RailWidth:       64,
-		SidebarFont:     11,
-		Notifications:   true,
-		Shell:           os.Getenv("SHELL"),
-		LabelKey:        "Alt+/",
-		NotesKey:        "Alt+.",
-		TmuxSocket:      "flockr",
+		Terminal:      defaultTerminal(),
+		Notifications: true,
+		Shell:         os.Getenv("SHELL"),
+		LabelKey:      "Alt+/",
+		NotesKey:      "Alt+.",
+		TmuxSocket:    "flockr",
 	}
 	if c.Shell == "" {
 		c.Shell = "/bin/sh"
@@ -135,15 +123,6 @@ func WriteFileAtomic(path string, data []byte, perm os.FileMode) error {
 	return os.Rename(f.Name(), path)
 }
 
-var templates = map[string]string{
-	"alacritty": "alacritty --class {class},{class} -o font.size={font} -e {cmd}",
-	"kitty":     "kitty --class {class} -o font_size={font} -e {cmd}",
-	"ghostty":   "ghostty --class={class} --font-size={font} -e {cmd}",
-	"wezterm":   "wezterm --config font_size={font} start --class {class} -- {cmd}",
-	"foot":      "foot --app-id {class} --font=monospace:size={font} {cmd}",
-	"xterm":     "xterm -class {class} -fa monospace -fs {font} -e {cmd}",
-}
-
 // runTemplates open a terminal running {cmd}.
 var runTemplates = map[string]string{
 	"alacritty":      "alacritty -e {cmd}",
@@ -189,24 +168,4 @@ func (c Config) OpenCommand(cmd string) string {
 		tpl += " -e {cmd}"
 	}
 	return strings.ReplaceAll(tpl, "{cmd}", cmd)
-}
-
-func detectTerminal() string {
-	for _, name := range []string{"alacritty", "kitty", "ghostty", "wezterm", "foot", "xterm"} {
-		if _, err := exec.LookPath(name); err == nil {
-			return name
-		}
-	}
-	return "xterm"
-}
-
-// SidebarCommand returns a shell command that opens the sidebar terminal
-// with the given WM class and font size (points) running cmd.
-func (c Config) SidebarCommand(class, cmd string, font float64) string {
-	tpl, ok := templates[c.SidebarTerminal]
-	if !ok {
-		tpl = c.SidebarTerminal
-	}
-	size := strconv.FormatFloat(font, 'f', -1, 64)
-	return strings.NewReplacer("{class}", class, "{cmd}", cmd, "{font}", size).Replace(tpl)
 }

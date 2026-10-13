@@ -24,8 +24,12 @@ func Format(s model.Snapshot, style Style, frame int) string {
 	parts := make([]string, 0, len(ws))
 	for _, w := range ws {
 		label := fmt.Sprint(w.Num)
-		if w.Name != "" {
-			label += " " + w.Name
+		name := w.WSLabel
+		if name == "" {
+			name = w.Name
+		}
+		if name != "" {
+			label += " " + name
 		}
 		glyph, colour := ui.Logo(ui.WorkspaceStatus(w), frame)
 		if style == Plain {

@@ -11,11 +11,8 @@ import (
 	"github.com/murrayb52/flockr/internal/model"
 	"github.com/murrayb52/flockr/internal/notesui"
 	"github.com/murrayb52/flockr/internal/protocol"
-	"github.com/murrayb52/flockr/internal/sidebar"
 	"github.com/murrayb52/flockr/internal/ui"
 )
-
-func runSidebar(cfg config.Config, menu bool) error { return sidebar.Run(cfg.Socket, menu) }
 
 func runNotesUI(cfg config.Config, pane string) error { return notesui.Run(cfg.Socket, pane) }
 
@@ -58,6 +55,7 @@ func runBar(cfg config.Config, plain bool) error {
 		tick.Stop()
 	}
 }
+
 
 func runStatus(cfg config.Config) error {
 	ch, closeFn, err := protocol.Subscribe(cfg.Socket)

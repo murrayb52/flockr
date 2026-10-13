@@ -1,6 +1,6 @@
 // Package daemon is flockr's long-running process. It owns all state: the i3
 // layout, the flockr terminals on the private tmux server, agent states, labels
-// and notes. Everything else (sidebar, bar, notes editor, bindings, hooks) is
+// and notes. Everything else (bar, notes editor, bindings, hooks) is
 // a client on its Unix socket.
 package daemon
 
@@ -32,7 +32,6 @@ type Deps struct {
 	Mux      Mux
 	Notifier Notifier // may be nil
 	Urgency  Urgency  // may be nil
-	Launch   Launcher // may be nil
 	Bin      string   // absolute path of the flockr binary
 	Now      func() time.Time
 }
@@ -44,31 +43,22 @@ type Daemon struct {
 	home  string
 	hints tmux.Hints
 
-	mu            sync.Mutex
-	agents        *agents.Table
-	panes         map[string]tmux.Pane // by session
-	tree          *i3.Node
-	infos         []i3.Workspace
-	snap          model.Snapshot
-	snapJSON      []byte
-	subs          map[chan []byte]struct{}
-	condensed     bool
-	focusedID     int64
-	headers       map[string]map[string]string // session → last options pushed
-	urgent        map[int64]bool               // xid → urgency hint set
-	popups        map[string]bool              // session → notes popup open
-	agentCmd      map[string]string            // pane → its foreground command while the agent runs
-	gap           int                          // current left gap (px), -1 unknown
-	sidebarReq    [2]int64                     // last requested sidebar width/height
-	sidebarStyled i3.NodeID                    // sidebar con already given border/sticky
-	launched      bool
-	placed        string    // last sidebar placement commands sent…
-	placedAt      time.Time // …and when
-	relaunch      bool      // sidebar closed to reopen at a new font size
-	font          float64   // sidebar font size (points)
-	notifyOn      bool      // desktop notifications (menu switch)
-	termsOnly     bool      // sidebar lists only flockr terminals (menu switch)
-	dirty         chan struct{}
+	mu        sync.Mutex
+	agents    *agents.Table
+	panes     map[string]tmux.Pane // by session
+	tree      *i3.Node
+	infos     []i3.Workspace
+	snap      model.Snapshot
+	snapJSON  []byte
+	subs      map[chan []byte]struct{}
+	focusedID int64
+	headers   map[string]map[string]string // session → last options pushed
+	urgent    map[int64]bool               // xid → urgency hint set
+	popups    map[string]bool              // session → notes popup open
+	agentCmd  map[string]string            // pane → its foreground command while the agent runs
+	notifyOn  bool                         // desktop notifications (`flockr notifications`)
+	wsLabels  map[int64]string             // workspace num → user label
+	dirty     chan struct{}
 }
 
 func New(cfg config.Config, deps Deps) *Daemon {
@@ -76,10 +66,8 @@ func New(cfg config.Config, deps Deps) *Daemon {
 		deps.Now = time.Now
 	}
 	home, _ := os.UserHomeDir()
-	set := loadSettings(cfg)
 	return &Daemon{
-		font: set.SidebarFont, notifyOn: *set.Notifications, termsOnly: set.TermsOnly,
-		cfg: cfg, d: deps, home: home,
+		cfg: cfg, d: deps, home: home, notifyOn: *loadSettings(cfg).Notifications,
 		store:    sessions.Store{Dir: filepath.Join(cfg.DataDir, "sessions")},
 		hints:    tmux.Hints{Label: cfg.LabelKey, Notes: cfg.NotesKey},
 		agents:   agents.New(),
@@ -89,7 +77,7 @@ func New(cfg config.Config, deps Deps) *Daemon {
 		urgent:   map[int64]bool{},
 		popups:   map[string]bool{},
 		agentCmd: map[string]string{},
-		gap:      -1,
+		wsLabels: loadWSLabels(cfg),
 		dirty:    make(chan struct{}, 1),
 	}
 }
@@ -121,18 +109,10 @@ func (d *Daemon) Run(ctx context.Context) {
 		return d.d.Now().Sub(lastOK) < 15*time.Second
 	}
 	refresh()
-	d.ensureSidebar()
 	for {
 		alive := true
 		select {
 		case <-ctx.Done():
-			// give the margin back, but don't wait on an i3 that is already gone
-			done := make(chan struct{})
-			go func() { d.d.WM.Command("gaps left all set 0"); close(done) }()
-			select {
-			case <-done:
-			case <-time.After(time.Second):
-			}
 			return
 		case <-events:
 			// let a burst of i3 events settle into one refresh
@@ -153,7 +133,7 @@ func (d *Daemon) Run(ctx context.Context) {
 }
 
 // Refresh rebuilds the snapshot from i3 + tmux and applies side effects:
-// tmux headers, urgency hints, sidebar placement and subscriber broadcast.
+// tmux headers, urgency hints and subscriber broadcast.
 // It reports whether i3 answered.
 func (d *Daemon) Refresh() bool {
 	tree, infos, err := d.d.WM.Tree()
@@ -267,7 +247,11 @@ func (d *Daemon) terms() map[string]*model.Term {
 }
 
 func (d *Daemon) build() model.Snapshot {
-	return model.Snapshot{Workspaces: i3tree.Build(d.tree, d.infos, d.terms()), Condensed: d.condensed, Font: d.font, Muted: !d.notifyOn, TermsOnly: d.termsOnly}
+	ws := i3tree.Build(d.tree, d.infos, d.terms())
+	for i, w := range ws {
+		ws[i].WSLabel = d.wsLabels[w.Num]
+	}
+	return model.Snapshot{Workspaces: ws, Muted: !d.notifyOn}
 }
 
 func (d *Daemon) rebuild() {
@@ -278,7 +262,6 @@ func (d *Daemon) rebuild() {
 	d.trackFocus() // may rebuild d.snap after marking an agent seen
 	d.pushHeaders()
 	d.syncUrgency()
-	d.placeSidebar()
 	snap := d.snap
 	snap.Now = d.d.Now()
 	b, _ := json.Marshal(snap)
@@ -347,7 +330,18 @@ func (d *Daemon) pushHeaders() {
 		}
 		h1, h2, lines := tmux.Header(w, now, d.home, d.hints)
 		name, _ := ui.Name(w)
-		opts := map[string]string{"@flockr_h1": h1, "@flockr_h2": h2, "status": map[int]string{1: "on", 2: "2"}[lines], "@flockr_title": name}
+		title := name
+		if a := ui.AgentOf(w); a != nil {
+			switch ui.StatusOf(a) {
+			case model.StatusWorking:
+				title = "● " + name
+			case model.StatusInput:
+				title = "! " + name
+			case model.StatusDone:
+				title = "✓ " + name
+			}
+		}
+		opts := map[string]string{"@flockr_h1": h1, "@flockr_h2": h2, "status": map[int]string{1: "on", 2: "2"}[lines], "@flockr_title": title}
 		last := d.headers[w.Term.Session]
 		changed := map[string]string{}
 		for k, v := range opts {

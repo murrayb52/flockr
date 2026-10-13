@@ -22,9 +22,6 @@ func TestDefaultsFollowXDG(t *testing.T) {
 	if c.DataDir != "/data/flockr" {
 		t.Errorf("data dir = %q", c.DataDir)
 	}
-	if c.SidebarWidth != 280 || c.RailWidth != 64 {
-		t.Errorf("widths = %d/%d", c.SidebarWidth, c.RailWidth)
-	}
 	if c.TmuxSocket != "flockr" {
 		t.Errorf("tmux socket = %q", c.TmuxSocket)
 	}
@@ -36,14 +33,14 @@ func TestFileOverridesDefaults(t *testing.T) {
 	os.MkdirAll(filepath.Join(dir, "flockr"), 0o755)
 	os.WriteFile(filepath.Join(dir, "flockr", "config.toml"), []byte(`
 terminal = "kitty"
-sidebar_width = 300
+sidebar_width = 300 # a key from older versions: ignored
 notifications = false
 `), 0o644)
 	c, err := Load()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if c.Terminal != "kitty" || c.SidebarWidth != 300 || c.Notifications {
+	if c.Terminal != "kitty" || c.Notifications {
 		t.Errorf("got %+v", c)
 	}
 }
@@ -55,25 +52,6 @@ func TestBadFileIsAnError(t *testing.T) {
 	os.WriteFile(filepath.Join(dir, "flockr", "config.toml"), []byte(`terminal = `), 0o644)
 	if _, err := Load(); err == nil {
 		t.Fatal("expected a parse error")
-	}
-}
-
-func TestSidebarCommand(t *testing.T) {
-	cases := map[string]string{
-		"alacritty":              "alacritty --class flockr-sidebar,flockr-sidebar -o font.size=9.5 -e flockr sidebar",
-		"kitty":                  "kitty --class flockr-sidebar -o font_size=9.5 -e flockr sidebar",
-		"ghostty":                "ghostty --class=flockr-sidebar --font-size=9.5 -e flockr sidebar",
-		"wezterm":                "wezterm --config font_size=9.5 start --class flockr-sidebar -- flockr sidebar",
-		"foot":                   "foot --app-id flockr-sidebar --font=monospace:size=9.5 flockr sidebar",
-		"xterm":                  "xterm -class flockr-sidebar -fa monospace -fs 9.5 -e flockr sidebar",
-		"st -c {class} -e {cmd}": "st -c flockr-sidebar -e flockr sidebar",
-		"st -c {class} -f mono:size={font} -e {cmd}": "st -c flockr-sidebar -f mono:size=9.5 -e flockr sidebar",
-	}
-	for term, want := range cases {
-		got := Config{SidebarTerminal: term}.SidebarCommand("flockr-sidebar", "flockr sidebar", 9.5)
-		if got != want {
-			t.Errorf("%s: got %q want %q", term, got, want)
-		}
 	}
 }
 
