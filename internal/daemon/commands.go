@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os/exec"
+	"strconv"
 	"strings"
 
 	"github.com/murrayb52/flockr/internal/model"
@@ -24,7 +25,7 @@ func (d *Daemon) Command(args []string) protocol.Response {
 	r := d.command(args)
 	if !r.OK && len(args) > 0 && d.d.Notifier != nil {
 		switch args[0] {
-		case "label", "notes", "next":
+		case "label", "notes", "next", "focus", "unread":
 			if err := d.d.Notifier.Notify(hintKey, "flockr", r.Error, false); err != nil {
 				log.Printf("notify: %v", err)
 			}
@@ -40,6 +41,13 @@ func (d *Daemon) command(args []string) protocol.Response {
 	switch args[0] {
 	case "next":
 		return d.next()
+	case "focus":
+		if len(args) != 2 {
+			return fail("usage: flockr focus N")
+		}
+		return d.focusNum(args[1])
+	case "unread":
+		return d.unread()
 	case "label":
 		return d.label()
 	case "wslabel":
@@ -79,6 +87,48 @@ func (d *Daemon) next() protocol.Response {
 		return ok("no agent needs you")
 	}
 	d.d.WM.Command(focusCmd(target))
+	d.markDirty()
+	return ok("")
+}
+
+// focusNum focuses the flockr terminal numbered n on the focused workspace,
+// without passing through the others (which would mark their agents seen).
+func (d *Daemon) focusNum(arg string) protocol.Response {
+	n, err := strconv.Atoi(arg)
+	if err != nil || n < 1 {
+		return fail("focus takes a terminal number, got " + arg)
+	}
+	d.mu.Lock()
+	var target int64
+	for _, ws := range d.snap.Workspaces {
+		if !ws.Focused {
+			continue
+		}
+		for _, w := range ws.Windows() {
+			if w.Num == n {
+				target = w.ConID
+			}
+		}
+	}
+	d.mu.Unlock()
+	if target == 0 {
+		return fail(fmt.Sprintf("no flockr terminal %d on this workspace", n))
+	}
+	d.d.WM.Command(focusCmd(target))
+	d.markDirty()
+	return ok("")
+}
+
+// unread marks the focused agent as not yet looked at, as if it had just
+// finished out of sight. It stays so until focus leaves it and comes back.
+func (d *Daemon) unread() protocol.Response {
+	w, found := d.focusedTerm()
+	if !found || w.Term.Agent == nil {
+		return fail("only an agent can be marked unread: focus a terminal running Claude Code or Pi")
+	}
+	d.mu.Lock()
+	d.agents.Unseen(w.Term.Pane)
+	d.mu.Unlock()
 	d.markDirty()
 	return ok("")
 }
@@ -185,9 +235,8 @@ func (d *Daemon) notes() protocol.Response {
 	if height > notesHeight {
 		height = notesHeight
 	}
-	header := map[string]int{"on": 1, "2": 2}[d.headers[s]["status"]]
 	go func() {
-		d.d.Mux.Popup(s, title, cmd, header, height)
+		d.d.Mux.Popup(s, title, cmd, 1, height) // just under the notes strip
 		d.mu.Lock()
 		delete(d.popups, s)
 		d.mu.Unlock()

@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/murrayb52/flockr/internal/model"
 )
@@ -25,42 +24,19 @@ func TestConfigNeverBindsKeys(t *testing.T) {
 	}
 }
 
-func TestHeaderEscapesUserText(t *testing.T) {
-	w := model.Window{App: "term", Term: &model.Term{Cwd: "/x/#tag", Command: "zsh",
-		Agent: &model.Agent{Kind: "claude", State: model.Input, Label: `fix #[fg=red] "quotes" 100%`,
-			Notes: []model.Note{{Text: "a", Done: true}, {Text: "b"}}}}}
-	h1, h2, lines := Header(w, time.Now(), "/home/u", Hints{Label: "Alt+/", Notes: "Alt+."})
-	if !strings.Contains(h1, "fix ##[fg=red] \"quotes\" 100%") {
-		t.Errorf("label not escaped: %s", h1)
-	}
-	if !strings.Contains(h1, "/x/##tag") || !strings.Contains(h1, "needs input") {
-		t.Errorf("h1 = %s", h1)
-	}
-	if lines != 2 || !strings.Contains(h2, "notes [1/2]") || !strings.Contains(h2, "Alt+. open") {
-		t.Errorf("h2 = %s (%d lines)", h2, lines)
+func TestHeaderIsTheNotesStrip(t *testing.T) {
+	w := model.Window{App: "term", Term: &model.Term{Cwd: "/x", Command: "claude",
+		Agent: &model.Agent{Kind: "claude", Notes: []model.Note{{Text: "a", Done: true}, {Text: "b"}}}}}
+	line, lines := Header(w, Hints{Notes: "Alt+#"})
+	if lines != 1 || !strings.Contains(line, "notes [1/2]") || !strings.Contains(line, "Alt+## open") {
+		t.Errorf("line = %s (%d lines)", line, lines)
 	}
 }
 
-func TestHeaderPlainTerminal(t *testing.T) {
+func TestPlainTerminalHasNoHeader(t *testing.T) {
 	w := model.Window{App: "term", Term: &model.Term{Cwd: "/x/app", Command: "zsh"}}
-	h1, h2, lines := Header(w, time.Now(), "", Hints{Label: "Alt+/", Notes: "Alt+."})
-	if lines != 1 || h2 != "" || !strings.Contains(h1, "zsh — app") || !strings.Contains(h1, "Alt+/ to name") {
-		t.Errorf("h1=%s h2=%s lines=%d", h1, h2, lines)
-	}
-}
-
-func TestTitledTerminalMovesHeaderIntoTitle(t *testing.T) {
-	a := &model.Agent{Kind: "claude", State: model.Working, Label: "api", Notes: []model.Note{{Done: true}, {}}}
-	w := model.Window{App: "term", Titled: true, Term: &model.Term{Cwd: "/x/app", Command: "claude", Agent: a}}
-	if _, _, lines := Header(w, time.Now(), "", Hints{}); lines != 0 {
-		t.Errorf("lines = %d, want 0", lines)
-	}
-	if got := Title(w, "/x", Hints{Label: "Alt+/", Notes: "Alt+."}); got != "● api  ·  Claude Code ~/app  ·  working  ·  notes 1/2 (Alt+.)" {
-		t.Errorf("title = %q", got)
-	}
-	w.Titled = false
-	if got := Title(w, "", Hints{}); got != "● api" {
-		t.Errorf("untitled title = %q", got)
+	if line, lines := Header(w, Hints{Notes: "Alt+."}); lines != 0 || line != "" {
+		t.Errorf("line=%q lines=%d", line, lines)
 	}
 }
 

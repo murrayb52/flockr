@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/murrayb52/flockr/internal/fontwidth"
 	"go.i3wm.org/i3/v4"
 )
 
@@ -59,6 +60,11 @@ func (I3) Events(ctx context.Context) <-chan struct{} {
 				recv.Close()
 			}()
 			for recv.Next() {
+				// title changes include flockr's own spinner frames; the
+				// once-a-second poll picks up a terminal's new title
+				if e, ok := recv.Event().(*i3.WindowEvent); ok && e.Change == "title" {
+					continue
+				}
 				select {
 				case ch <- struct{}{}:
 				default:
@@ -72,4 +78,13 @@ func (I3) Events(ctx context.Context) <-chan struct{} {
 		}
 	}()
 	return ch
+}
+
+// TitleMeasure measures text in the title font of the running i3's config.
+func TitleMeasure() (fontwidth.Measure, error) {
+	c, err := i3.GetConfig()
+	if err != nil {
+		return nil, err
+	}
+	return fontwidth.FromI3Config(c.Config)
 }

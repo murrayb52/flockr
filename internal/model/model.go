@@ -62,8 +62,15 @@ type Window struct {
 	App     string `json:"app"` // normalised app key, e.g. "firefox", "term"
 	Focused bool   `json:"focused"`
 	Visible bool   `json:"visible"`
-	Titled  bool   `json:"titled,omitempty"` // i3 draws a title bar for it (stack/tabs or normal border)
 	Term    *Term  `json:"term,omitempty"`
+	// Num numbers the flockr terminals of a workspace from 1 in i3's order
+	// (`flockr focus N`); 0 for other windows.
+	Num int `json:"num,omitempty"`
+	// TitleWidth is the width in pixels of the title bar i3 draws for the
+	// window (0 when it has none).
+	TitleWidth  int    `json:"title_width,omitempty"`
+	Border      string `json:"-"` // i3 border style: normal, pixel or none
+	BorderWidth int    `json:"-"`
 }
 
 // Group is one top-level child of a workspace: a lone window or a container.

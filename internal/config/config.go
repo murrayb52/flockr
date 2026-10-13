@@ -22,6 +22,10 @@ type Config struct {
 	// Key names shown in terminal headers; match them to your i3 bindings.
 	LabelKey string `toml:"label_key"`
 	NotesKey string `toml:"notes_key"`
+	// TitleCharWidth, if set, treats i3's title font as monospaced with
+	// characters this many pixels wide when pushing the directory to the right
+	// edge of a terminal's title bar. 0 measures the font the i3 config names.
+	TitleCharWidth float64 `toml:"title_char_width"`
 
 	Socket     string `toml:"-"`
 	DataDir    string `toml:"-"`

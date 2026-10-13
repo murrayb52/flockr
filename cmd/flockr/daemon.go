@@ -10,6 +10,7 @@ import (
 
 	"github.com/murrayb52/flockr/internal/config"
 	"github.com/murrayb52/flockr/internal/daemon"
+	"github.com/murrayb52/flockr/internal/fontwidth"
 	"github.com/murrayb52/flockr/internal/notify"
 	"github.com/murrayb52/flockr/internal/tmux"
 	"github.com/murrayb52/flockr/internal/x11"
@@ -55,6 +56,13 @@ func runDaemon(cfg config.Config) error {
 		}()
 	} else {
 		log.Printf("urgency hints disabled: %v", err)
+	}
+	if cfg.TitleCharWidth > 0 {
+		deps.Measure = fontwidth.Mono(cfg.TitleCharWidth)
+	} else if m, err := daemon.TitleMeasure(); err == nil {
+		deps.Measure = m
+	} else {
+		log.Printf("title font: %v (set title_char_width to right-align directories)", err)
 	}
 	d := daemon.New(cfg, deps)
 	go d.Serve(ctx, l)

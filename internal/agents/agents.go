@@ -121,6 +121,13 @@ func (t *Table) Seen(pane string) bool {
 	return true
 }
 
+// Unseen marks the pane's agent as not looked at yet.
+func (t *Table) Unseen(pane string) {
+	if a := t.byPane[pane]; a != nil {
+		a.Unseen = true
+	}
+}
+
 // Clear forgets the pane's agent (the pane closed or its agent process died).
 func (t *Table) Clear(pane string) bool {
 	if _, ok := t.byPane[pane]; !ok {

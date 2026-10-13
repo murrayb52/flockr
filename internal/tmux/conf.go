@@ -3,7 +3,6 @@ package tmux
 import (
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/murrayb52/flockr/internal/model"
 	"github.com/murrayb52/flockr/internal/ui"
@@ -33,8 +32,8 @@ set -g set-titles-string "#{?@flockr_title,#{@flockr_title},#{pane_current_comma
 set -g status-position top
 set -g status-interval 2
 set -g status-style "bg=#1b1f26,fg=%[2]s"
-set -g status-format[0] "#{?@flockr_h1,#{@flockr_h1},#[fg=%[3]s] #{pane_current_command} · #{pane_current_path}}"
-set -g status-format[1] "#{@flockr_h2}"
+set -g status off
+set -g status-format[0] "#{@flockr_h1}"
 set -g message-style "bg=#1d2128,fg=%[2]s"
 set -g message-command-style "bg=#1d2128,fg=%[2]s"
 set -g popup-style "bg=#1a2420"
@@ -51,96 +50,22 @@ func Escape(s string) string { return strings.ReplaceAll(s, "#", "##") }
 // Hints are the key names shown in the header (they depend on the user's i3 bindings).
 type Hints struct{ Label, Notes string }
 
-// Title is the window title flockr gives a terminal. Where i3 draws a title bar
-// for it (w.Titled) that bar is the header, so the title carries what the tmux
-// header would; otherwise it is just the state and name.
-func Title(w model.Window, home string, hints Hints) string {
-	name, _ := ui.Name(w)
+// Header renders the line tmux shows at the top of a flockr terminal: the notes
+// strip, for agents only. lines is 0 when there is none (the rest of the header
+// is the window's i3 title bar).
+func Header(w model.Window, hints Hints) (line string, lines int) {
 	a := ui.AgentOf(w)
-	title := name
-	if a != nil {
-		switch ui.StatusOf(a) {
-		case model.StatusWorking:
-			title = "● " + name
-		case model.StatusInput:
-			title = "! " + name
-		case model.StatusDone:
-			title = "✓ " + name
-		}
-	}
-	if !w.Titled || w.Term == nil {
-		return title
-	}
-	parts := []string{title}
-	labelled := (a != nil && a.Label != "") || (a == nil && w.Term.Label != "")
-	if !labelled && hints.Label != "" {
-		parts[0] += "  (" + hints.Label + " to name)"
-	} else {
-		prog := w.Term.Command
-		if a != nil {
-			prog = ui.KindName(a.Kind)
-		}
-		parts = append(parts, prog+" "+ui.Home(w.Term.Cwd, home))
-	}
-	if a != nil {
-		parts = append(parts, ui.StateText(a))
-		done, total := ui.NotesCount(a)
-		notes := fmt.Sprintf("notes %d/%d", done, total)
-		if hints.Notes != "" {
-			notes += " (" + hints.Notes + ")"
-		}
-		parts = append(parts, notes)
-	}
-	return strings.Join(parts, "  ·  ")
-}
-
-// Header renders the two header lines for a flockr terminal and how many status
-// lines it needs (2 when an agent runs: the second is the notes strip). A
-// terminal with an i3 title bar needs none: its title is the header.
-func Header(w model.Window, now time.Time, home string, hints Hints) (h1, h2 string, lines int) {
-	if w.Titled {
-		return "", "", 0
-	}
-	t := ui.Tile(w)
-	name, auto := ui.Name(w)
-	var b strings.Builder
-	fmt.Fprintf(&b, "#[bg=%s,fg=%s,bold] %s #[default] ", t.BG, t.FG, Escape(t.Glyph))
-	if auto {
-		fmt.Fprintf(&b, "#[italics,fg=#b4bccb]%s#[noitalics]", Escape(name))
-	} else {
-		fmt.Fprintf(&b, "#[bold]%s#[nobold]", Escape(name))
-	}
-	a := ui.AgentOf(w)
-	labelled := (a != nil && a.Label != "") || (a == nil && w.Term != nil && w.Term.Label != "")
-	if !labelled && hints.Label != "" {
-		fmt.Fprintf(&b, "#[fg=%s]  %s to name", ui.ColFaint, Escape(hints.Label))
-	} else if w.Term != nil {
-		prog := w.Term.Command
-		if a != nil {
-			prog = ui.KindName(a.Kind)
-		}
-		fmt.Fprintf(&b, "#[fg=%s]  %s · %s", ui.ColDim, Escape(prog), Escape(ui.Home(w.Term.Cwd, home)))
-	}
-	if a != nil {
-		s := ui.StatusOf(a)
-		glyph, col := ui.Logo(s, 0)
-		if s == model.StatusWorking {
-			glyph = "●"
-		}
-		fmt.Fprintf(&b, "#[align=right]#[fg=%s,bold]%s #[nobold,fg=%s]%s ", col, glyph, ui.ColText, Escape(ui.StateText(a)))
-	}
-	h1 = b.String()
 	if a == nil {
-		return h1, "", 1
+		return "", 0
 	}
 	done, total := ui.NotesCount(a)
 	col, verb := ui.ColBlue, "open"
 	if total == 0 {
 		col, verb = ui.ColFaint, "add"
 	}
-	h2 = fmt.Sprintf("#[bg=#181c22,fg=%s]      notes [%d/%d]#[align=right,fg=%s]%s %s ", col, done, total, ui.ColFaint, Escape(hints.Notes), verb)
-	if hints.Notes == "" {
-		h2 = fmt.Sprintf("#[bg=#181c22,fg=%s]      notes [%d/%d]", col, done, total)
+	line = fmt.Sprintf("#[bg=#181c22,fg=%s] notes [%d/%d]", col, done, total)
+	if hints.Notes != "" {
+		line += fmt.Sprintf("#[align=right,fg=%s]%s %s ", ui.ColFaint, Escape(hints.Notes), verb)
 	}
-	return h1, h2, 2
+	return line, 1
 }

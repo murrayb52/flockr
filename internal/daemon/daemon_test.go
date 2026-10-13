@@ -160,7 +160,7 @@ func agentOf(d *Daemon, pane string) *model.Agent {
 // ---- tests ----
 
 func TestInputNotifiesAndRaisesUrgency(t *testing.T) {
-	d, _, mux, n, u := fixture(t)
+	d, wm, mux, n, u := fixture(t)
 	d.HandleEvent(ev("start", "%1", "s-claude"))
 	d.HandleEvent(agents.Event{Agent: "claude", Name: "prompt", Pane: "%1", SessionID: "s-claude", Prompt: "add pagination"})
 	d.HandleEvent(agents.Event{Agent: "claude", Name: "input", Pane: "%1", SessionID: "s-claude", Detail: "npm test"})
@@ -172,12 +172,19 @@ func TestInputNotifiesAndRaisesUrgency(t *testing.T) {
 	if !u[1100] {
 		t.Error("urgency hint should be set on the agent's window")
 	}
-	// the terminal is in a stack, so i3's title bar is its header: no tmux status
-	if mux.opt("s1", "status") != "off" {
-		t.Errorf("status = %q", mux.opt("s1", "status"))
+	if mux.opt("s1", "status") != "on" || !strings.Contains(mux.opt("s1", "@flockr_h1"), "notes [0/0]") {
+		t.Errorf("notes strip = %q", mux.opt("s1", "@flockr_h1"))
 	}
-	if got := mux.opt("s1", "@flockr_title"); got != "! add pagination  (Alt+/ to name)  ·  needs input  ·  notes 0/0 (Alt+.)" {
-		t.Errorf("title = %q", got)
+	if mux.opt("s2", "status") != "off" {
+		t.Error("a plain shell has no tmux header")
+	}
+	titles := wm.took("[con_id=11] title_format")
+	if len(titles) == 0 || !strings.Contains(titles[len(titles)-1], "</span> 1 <span") ||
+		!strings.Contains(titles[len(titles)-1], "add pagination</b>  <span foreground='#E53935'>needs input") || !strings.Contains(titles[len(titles)-1], "code/api</span>") {
+		t.Errorf("i3 title = %v", titles)
+	}
+	if mux.opt("s1", "@flockr_title") != "! add pagination" {
+		t.Errorf("title = %q", mux.opt("s1", "@flockr_title"))
 	}
 }
 
@@ -199,6 +206,62 @@ func TestFocusClearsDoneAndUrgency(t *testing.T) {
 	}
 	if len(n.closed) == 0 || n.closed[len(n.closed)-1] != "%1" {
 		t.Errorf("notification should close on focus: %v", n.closed)
+	}
+}
+
+func TestTerminalsGetATitleBarOnce(t *testing.T) {
+	d, wm, _, _, _ := fixture(t) // the fixture's nodes have no border style yet
+	d.Refresh()
+	d.Refresh()
+	for _, con := range []string{"11", "12"} {
+		if got := wm.took("[con_id=" + con + "] border normal"); len(got) != 1 {
+			t.Errorf("terminal %s: border commands = %v", con, got)
+		}
+	}
+	if got := wm.took("[con_id=13] border"); len(got) != 0 {
+		t.Errorf("only flockr terminals: %v", got)
+	}
+	w := model.Window{ConID: 7, Border: "pixel", BorderWidth: 5}
+	if got := borderCmd(w); got != "[con_id=7] border normal 5" {
+		t.Errorf("keeps the width: %s", got)
+	}
+}
+
+func TestFocusByNumber(t *testing.T) {
+	d, wm, _, _, _ := fixture(t)
+	if r := d.Command([]string{"focus", "2"}); !r.OK {
+		t.Fatal(r.Error)
+	}
+	if got := wm.took("focus"); len(got) == 0 || !strings.Contains(got[len(got)-1], "con_id=12") {
+		t.Errorf("commands = %v", got)
+	}
+	if r := d.Command([]string{"focus", "3"}); r.OK {
+		t.Error("there is no terminal 3 (firefox is not numbered)")
+	}
+}
+
+func TestMarkUnread(t *testing.T) {
+	d, wm, _, _, _ := fixture(t)
+	wm.focus(11)
+	d.Refresh()
+	d.HandleEvent(ev("start", "%1", "a"))
+	d.HandleEvent(ev("stop", "%1", "a"))
+	if a := agentOf(d, "%1"); a.Unseen {
+		t.Fatal("finished in view: already seen")
+	}
+	if r := d.Command([]string{"unread"}); !r.OK {
+		t.Fatal(r.Error)
+	}
+	d.Refresh()
+	if a := agentOf(d, "%1"); !a.Unseen {
+		t.Error("unread marks the focused agent unseen, and it stays so while focused")
+	}
+	wm.focus(12)
+	d.Refresh()
+	wm.focus(11)
+	d.Refresh()
+	if a := agentOf(d, "%1"); a.Unseen {
+		t.Error("coming back to it marks it seen")
 	}
 }
 

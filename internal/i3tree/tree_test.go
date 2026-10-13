@@ -92,9 +92,6 @@ func TestSplitOfTwoStacks(t *testing.T) {
 	if r := g.Groups[1].Windows; !r[0].Visible || r[1].Visible {
 		t.Errorf("right stack shows its first focus child: %+v", r)
 	}
-	if !l[0].Titled || !l[1].Titled {
-		t.Error("stack members have an i3 title bar")
-	}
 }
 
 func TestWorkspaceThatIsItselfAStack(t *testing.T) {
@@ -124,18 +121,6 @@ func TestLoneWindowsSideBySide(t *testing.T) {
 	}
 	if !reflect.DeepEqual(labels, []string{"left", "middle", "right"}) {
 		t.Errorf("labels = %v", labels)
-	}
-	if got.Groups[0].Windows[0].Titled {
-		t.Error("a split window with a pixel border has no title bar")
-	}
-}
-
-func TestNormalBorderHasTitle(t *testing.T) {
-	a, b := win("Alacritty", "a"), win("Alacritty", "b")
-	a.Border = i3.NormalBorder
-	got := Build(root(ws(4, "4", i3.SplitH, a, b)), []i3.Workspace{{Num: 4, Name: "4"}}, nil)[0]
-	if !got.Groups[0].Windows[0].Titled || got.Groups[1].Windows[0].Titled {
-		t.Errorf("titled = %v, %v", got.Groups[0].Windows[0].Titled, got.Groups[1].Windows[0].Titled)
 	}
 }
 

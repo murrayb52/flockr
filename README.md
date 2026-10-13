@@ -32,9 +32,13 @@ every action is an **i3 binding**, so it works whichever agent has the keyboard.
 - **Notes per agent session** — `Alt+.` drops a small checklist down from the agent's header. Notes and
   labels are saved against the agent's session id, so `claude --resume` (in any terminal) brings them
   back.
-- **A header in every flockr terminal** — label, program, directory, state and a `notes [done/total]`
-  strip, drawn by a private, keyless tmux. Where i3 already draws a title bar (stacked or tabbed
-  containers, `border normal`), the header moves into that title instead of adding a second strip.
+- **A title bar for every flockr terminal** — flockr sets i3's title for it: the agent's logo, its number
+  on the workspace, its state, its label and what it is doing, with the working directory on the right
+  (flockr gives the terminal i3's normal border once, so it has a title bar outside a stack too). Agents also get a
+  one-line `notes [done/total]` strip inside the terminal, drawn by a private, keyless tmux.
+- **Jump by number** — `Alt+1`…`Alt+9` focus that flockr terminal of the workspace directly, without
+  passing through (and marking seen) the agents in between. `Alt+u` marks the focused agent unread
+  again.
 - **Status bar feed** — `flockr bar` prints each workspace's name and one status logo for polybar.
 
 ## Requirements
@@ -96,8 +100,8 @@ In the notes drawer: `Tab`/`↓` next, `Shift+Tab`/`↑` previous, `Space` tick,
 ```
 
 - `flockr term` starts each terminal as a session on a **private tmux server** (`tmux -L flockr`) with no
-  prefix key and no bindings, so tmux never takes a keystroke. Its top status lines are the header and
-  notes strip (or its window title, when i3 shows one); `display-popup` hosts the notes editor.
+  prefix key and no bindings, so tmux never takes a keystroke. Its top status line is an agent's notes
+  strip (plain shells have none); `display-popup` hosts the notes editor.
 - Claude Code hooks (`flockr hook claude …`) and the Pi extension report state over a Unix socket in
   `$XDG_RUNTIME_DIR/flockr/`. They never print, never fail and time out quickly, so they cannot slow an
   agent down.
@@ -123,6 +127,8 @@ terminal = "kitty"       # opened by `flockr term` from a key binding; default: 
 notifications = true     # `flockr notifications` overrides it (saved in ~/.local/share/flockr)
 label_key = "Alt+/"      # key names shown in terminal headers — match your bindings
 notes_key = "Alt+."
+title_char_width = 8     # treat i3's title font as monospaced, this many px per character, when
+                         # right-aligning the directory; default: measure the font your i3 config names
 ```
 
 Extra tmux settings for flockr terminals go in `~/.config/flockr/tmux.conf`.

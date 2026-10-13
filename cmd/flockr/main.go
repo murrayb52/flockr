@@ -28,6 +28,8 @@ Bindings (call these from i3):
   flockr wslabel [LABEL]        name the focused workspace (stored separately from i3)
   flockr notes                  open/close the focused agent's notes
   flockr next                   focus the next agent that needs you
+  flockr focus N                focus flockr terminal N of this workspace (the number in its title)
+  flockr unread                 mark the focused agent as not looked at yet
 
 Other agents:
   flockr event AGENT NAME session=ID [prompt=…] [detail=…] [activity=…] [source=…]
@@ -68,7 +70,7 @@ func run(args []string) error {
 		return runDaemon(cfg)
 	case "term":
 		return runTerm(cfg, args[1:])
-	case "label", "wslabel", "notes", "next", "refresh", "notifications":
+	case "label", "wslabel", "notes", "next", "focus", "unread", "refresh", "notifications":
 		return command(cfg, args...)
 	case "event":
 		return runEvent(cfg, args[1:])

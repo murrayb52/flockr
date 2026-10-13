@@ -18,6 +18,7 @@ type claudePayload struct {
 	NotificationType string          `json:"notification_type"`
 	Message          string          `json:"message"`
 	LastMessage      string          `json:"last_assistant_message"`
+	AgentID          string          `json:"agent_id"` // set only inside a subagent
 }
 
 // FromClaude maps a Claude Code hook (event name as configured in settings.json,
@@ -34,6 +35,12 @@ func FromClaude(event string, payload []byte, pane string) (agents.Event, bool) 
 	case "UserPromptSubmit":
 		ev.Name, ev.Prompt = "prompt", Trim(p.Prompt, 200)
 	case "PreToolUse", "PostToolUse":
+		// A background subagent keeps using tools after the session's turn
+		// ends, and never sends Stop: its tools would leave the agent
+		// "working" for good. (Its permission requests still count.)
+		if p.AgentID != "" {
+			return agents.Event{}, false
+		}
 		ev.Name, ev.Activity = "tool", Trim(strings.TrimSpace(p.ToolName+" "+toolSummary(p.ToolName, p.ToolInput)), 80)
 	case "PermissionRequest":
 		ev.Name, ev.Detail = "input", Trim(permissionSummary(p.ToolName, p.ToolInput), 160)

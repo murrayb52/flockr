@@ -51,6 +51,7 @@ func TestClaudeIgnores(t *testing.T) {
 	for _, c := range []struct{ event, payload string }{
 		{"Notification", notifyIdle},
 		{"SubagentStop", stop},
+		{"PostToolUse", `{"session_id":"s","agent_id":"a1","tool_name":"Bash","tool_input":{"command":"ls"}}`},
 		{"Stop", `{not json`},
 		{"Stop", `{"hook_event_name":"Stop"}`}, // no session id
 	} {

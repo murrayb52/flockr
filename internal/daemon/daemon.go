@@ -19,6 +19,7 @@ import (
 
 	"github.com/murrayb52/flockr/internal/agents"
 	"github.com/murrayb52/flockr/internal/config"
+	"github.com/murrayb52/flockr/internal/fontwidth"
 	"github.com/murrayb52/flockr/internal/i3tree"
 	"github.com/murrayb52/flockr/internal/model"
 	"github.com/murrayb52/flockr/internal/sessions"
@@ -30,9 +31,10 @@ import (
 type Deps struct {
 	WM       WM
 	Mux      Mux
-	Notifier Notifier // may be nil
-	Urgency  Urgency  // may be nil
-	Bin      string   // absolute path of the flockr binary
+	Notifier Notifier          // may be nil
+	Urgency  Urgency           // may be nil
+	Bin      string            // absolute path of the flockr binary
+	Measure  fontwidth.Measure // i3's title font; nil leaves titles unpadded
 	Now      func() time.Time
 }
 
@@ -53,6 +55,9 @@ type Daemon struct {
 	subs      map[chan []byte]struct{}
 	focusedID int64
 	headers   map[string]map[string]string // session → last options pushed
+	titles    map[int64]string             // con id → last i3 title_format sent + window title
+	bordered  map[int64]bool               // con id → given a title bar (border normal) once
+	frame     int                          // spinner frame of working agents' titles
 	urgent    map[int64]bool               // xid → urgency hint set
 	popups    map[string]bool              // session → notes popup open
 	agentCmd  map[string]string            // pane → its foreground command while the agent runs
@@ -74,6 +79,8 @@ func New(cfg config.Config, deps Deps) *Daemon {
 		panes:    map[string]tmux.Pane{},
 		subs:     map[chan []byte]struct{}{},
 		headers:  map[string]map[string]string{},
+		titles:   map[int64]string{},
+		bordered: map[int64]bool{},
 		urgent:   map[int64]bool{},
 		popups:   map[string]bool{},
 		agentCmd: map[string]string{},
@@ -99,6 +106,8 @@ func (d *Daemon) Run(ctx context.Context) {
 	}
 	tick := time.NewTicker(time.Second)
 	defer tick.Stop()
+	spin := time.NewTicker(250 * time.Millisecond) // the bar's spinner speed
+	defer spin.Stop()
 	lastOK := d.d.Now()
 	refresh := func() bool {
 		if d.Refresh() {
@@ -122,6 +131,8 @@ func (d *Daemon) Run(ctx context.Context) {
 			alive = refresh()
 		case <-tick.C:
 			alive = refresh()
+		case <-spin.C:
+			d.animate()
 		case key := <-actions:
 			d.focusPane(key)
 		}
@@ -250,6 +261,15 @@ func (d *Daemon) build() model.Snapshot {
 	ws := i3tree.Build(d.tree, d.infos, d.terms())
 	for i, w := range ws {
 		ws[i].WSLabel = d.wsLabels[w.Num]
+		n := 0
+		for gi := range w.Groups {
+			for wi := range w.Groups[gi].Windows {
+				if win := &w.Groups[gi].Windows[wi]; win.Term != nil {
+					n++
+					win.Num = n
+				}
+			}
+		}
 	}
 	return model.Snapshot{Workspaces: ws, Muted: !d.notifyOn}
 }
@@ -261,6 +281,7 @@ func (d *Daemon) rebuild() {
 	d.snap = d.build()
 	d.trackFocus() // may rebuild d.snap after marking an agent seen
 	d.pushHeaders()
+	d.syncTitles()
 	d.syncUrgency()
 	snap := d.snap
 	snap.Now = d.d.Now()
@@ -323,14 +344,24 @@ func (d *Daemon) paneFocused(pane string) bool {
 }
 
 func (d *Daemon) pushHeaders() {
-	now := d.d.Now()
 	for _, w := range d.windows() {
 		if w.Term == nil {
 			continue
 		}
-		h1, h2, lines := tmux.Header(w, now, d.home, d.hints)
-		status := map[int]string{0: "off", 1: "on", 2: "2"}[lines]
-		opts := map[string]string{"@flockr_h1": h1, "@flockr_h2": h2, "status": status, "@flockr_title": tmux.Title(w, d.home, d.hints)}
+		h1, lines := tmux.Header(w, d.hints)
+		name, _ := ui.Name(w)
+		title := name
+		if a := ui.AgentOf(w); a != nil {
+			switch ui.StatusOf(a) {
+			case model.StatusWorking:
+				title = "● " + name
+			case model.StatusInput:
+				title = "! " + name
+			case model.StatusDone:
+				title = "✓ " + name
+			}
+		}
+		opts := map[string]string{"@flockr_h1": h1, "status": map[int]string{0: "off", 1: "on"}[lines], "@flockr_title": title}
 		last := d.headers[w.Term.Session]
 		changed := map[string]string{}
 		for k, v := range opts {
