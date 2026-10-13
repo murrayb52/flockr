@@ -62,6 +62,7 @@ type Window struct {
 	App     string `json:"app"` // normalised app key, e.g. "firefox", "term"
 	Focused bool   `json:"focused"`
 	Visible bool   `json:"visible"`
+	Titled  bool   `json:"titled,omitempty"` // i3 draws a title bar for it (stack/tabs or normal border)
 	Term    *Term  `json:"term,omitempty"`
 }
 
@@ -75,7 +76,7 @@ type Group struct {
 
 type Workspace struct {
 	Num     int64   `json:"num"`
-	Name    string  `json:"name"` // display name without the "N:" prefix
+	Name    string  `json:"name"`               // display name without the "N:" prefix
 	WSLabel string  `json:"ws_label,omitempty"` // user-set label, separate from i3's name
 	Focused bool    `json:"focused"`
 	Visible bool    `json:"visible"`

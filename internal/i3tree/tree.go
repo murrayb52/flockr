@@ -58,7 +58,7 @@ func workspace(n *i3.Node, info i3.Workspace, terms map[string]*model.Term) mode
 	var floating []model.Window
 	for _, f := range n.FloatingNodes {
 		for _, leaf := range leaves(f) {
-			floating = append(floating, b.window(leaf, true))
+			floating = append(floating, b.window(leaf, true, leaf.Border == i3.NormalBorder))
 		}
 	}
 	if len(floating) > 0 {
@@ -79,10 +79,10 @@ func (b builder) group(n *i3.Node, label string, onTop bool) model.Group {
 	if n.Window != 0 {
 		g.Layout = "window"
 	}
-	var add func(n *i3.Node, visible bool)
-	add = func(n *i3.Node, visible bool) {
+	var add func(n *i3.Node, visible, titled bool)
+	add = func(n *i3.Node, visible, titled bool) {
 		if n.Window != 0 {
-			w := b.window(n, visible && b.wsVisible)
+			w := b.window(n, visible && b.wsVisible, titled || n.Border == i3.NormalBorder)
 			if w.Focused {
 				g.Focused = true
 			}
@@ -91,20 +91,20 @@ func (b builder) group(n *i3.Node, label string, onTop bool) model.Group {
 		}
 		stacked := n.Layout == i3.Stacked || n.Layout == i3.Tabbed
 		for _, c := range n.Nodes {
-			add(c, visible && (!stacked || isFocusChild(n, c)))
+			add(c, visible && (!stacked || isFocusChild(n, c)), stacked)
 		}
 	}
-	add(n, true)
+	add(n, true, false)
 	if !g.Focused && onTop && n.Focused {
 		g.Focused = true
 	}
 	return g
 }
 
-func (b builder) window(n *i3.Node, visible bool) model.Window {
+func (b builder) window(n *i3.Node, visible, titled bool) model.Window {
 	class := n.WindowProperties.Class
 	w := model.Window{ConID: int64(n.ID), XID: n.Window, Class: class, Title: n.Name,
-		App: AppKey(class), Focused: n.Focused, Visible: visible}
+		App: AppKey(class), Focused: n.Focused, Visible: visible, Titled: titled}
 	if id := SessionFromTitle(n.Name); id != "" {
 		if t, ok := b.terms[id]; ok {
 			w.App, w.Term = "term", t

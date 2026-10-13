@@ -172,14 +172,12 @@ func TestInputNotifiesAndRaisesUrgency(t *testing.T) {
 	if !u[1100] {
 		t.Error("urgency hint should be set on the agent's window")
 	}
-	if h := mux.opt("s1", "@flockr_h1"); !strings.Contains(h, "needs input") {
-		t.Errorf("header = %q", h)
+	// the terminal is in a stack, so i3's title bar is its header: no tmux status
+	if mux.opt("s1", "status") != "off" {
+		t.Errorf("status = %q", mux.opt("s1", "status"))
 	}
-	if mux.opt("s1", "status") != "2" || !strings.Contains(mux.opt("s1", "@flockr_h2"), "notes [0/0]") {
-		t.Errorf("notes strip = %q", mux.opt("s1", "@flockr_h2"))
-	}
-	if mux.opt("s1", "@flockr_title") != "! add pagination" {
-		t.Errorf("title = %q", mux.opt("s1", "@flockr_title"))
+	if got := mux.opt("s1", "@flockr_title"); got != "! add pagination  (Alt+/ to name)  ·  needs input  ·  notes 0/0 (Alt+.)" {
+		t.Errorf("title = %q", got)
 	}
 }
 

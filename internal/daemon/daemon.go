@@ -329,19 +329,8 @@ func (d *Daemon) pushHeaders() {
 			continue
 		}
 		h1, h2, lines := tmux.Header(w, now, d.home, d.hints)
-		name, _ := ui.Name(w)
-		title := name
-		if a := ui.AgentOf(w); a != nil {
-			switch ui.StatusOf(a) {
-			case model.StatusWorking:
-				title = "● " + name
-			case model.StatusInput:
-				title = "! " + name
-			case model.StatusDone:
-				title = "✓ " + name
-			}
-		}
-		opts := map[string]string{"@flockr_h1": h1, "@flockr_h2": h2, "status": map[int]string{1: "on", 2: "2"}[lines], "@flockr_title": title}
+		status := map[int]string{0: "off", 1: "on", 2: "2"}[lines]
+		opts := map[string]string{"@flockr_h1": h1, "@flockr_h2": h2, "status": status, "@flockr_title": tmux.Title(w, d.home, d.hints)}
 		last := d.headers[w.Term.Session]
 		changed := map[string]string{}
 		for k, v := range opts {

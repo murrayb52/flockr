@@ -33,7 +33,8 @@ every action is an **i3 binding**, so it works whichever agent has the keyboard.
   labels are saved against the agent's session id, so `claude --resume` (in any terminal) brings them
   back.
 - **A header in every flockr terminal** — label, program, directory, state and a `notes [done/total]`
-  strip, drawn by a private, keyless tmux.
+  strip, drawn by a private, keyless tmux. Where i3 already draws a title bar (stacked or tabbed
+  containers, `border normal`), the header moves into that title instead of adding a second strip.
 - **Status bar feed** — `flockr bar` prints each workspace's name and one status logo for polybar.
 
 ## Requirements
@@ -96,7 +97,7 @@ In the notes drawer: `Tab`/`↓` next, `Shift+Tab`/`↑` previous, `Space` tick,
 
 - `flockr term` starts each terminal as a session on a **private tmux server** (`tmux -L flockr`) with no
   prefix key and no bindings, so tmux never takes a keystroke. Its top status lines are the header and
-  notes strip; `display-popup` hosts the notes editor.
+  notes strip (or its window title, when i3 shows one); `display-popup` hosts the notes editor.
 - Claude Code hooks (`flockr hook claude …`) and the Pi extension report state over a Unix socket in
   `$XDG_RUNTIME_DIR/flockr/`. They never print, never fail and time out quickly, so they cannot slow an
   agent down.

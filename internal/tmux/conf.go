@@ -51,9 +51,56 @@ func Escape(s string) string { return strings.ReplaceAll(s, "#", "##") }
 // Hints are the key names shown in the header (they depend on the user's i3 bindings).
 type Hints struct{ Label, Notes string }
 
+// Title is the window title flockr gives a terminal. Where i3 draws a title bar
+// for it (w.Titled) that bar is the header, so the title carries what the tmux
+// header would; otherwise it is just the state and name.
+func Title(w model.Window, home string, hints Hints) string {
+	name, _ := ui.Name(w)
+	a := ui.AgentOf(w)
+	title := name
+	if a != nil {
+		switch ui.StatusOf(a) {
+		case model.StatusWorking:
+			title = "● " + name
+		case model.StatusInput:
+			title = "! " + name
+		case model.StatusDone:
+			title = "✓ " + name
+		}
+	}
+	if !w.Titled || w.Term == nil {
+		return title
+	}
+	parts := []string{title}
+	labelled := (a != nil && a.Label != "") || (a == nil && w.Term.Label != "")
+	if !labelled && hints.Label != "" {
+		parts[0] += "  (" + hints.Label + " to name)"
+	} else {
+		prog := w.Term.Command
+		if a != nil {
+			prog = ui.KindName(a.Kind)
+		}
+		parts = append(parts, prog+" "+ui.Home(w.Term.Cwd, home))
+	}
+	if a != nil {
+		parts = append(parts, ui.StateText(a))
+		done, total := ui.NotesCount(a)
+		notes := fmt.Sprintf("notes %d/%d", done, total)
+		if hints.Notes != "" {
+			notes += " (" + hints.Notes + ")"
+		}
+		parts = append(parts, notes)
+	}
+	return strings.Join(parts, "  ·  ")
+}
+
 // Header renders the two header lines for a flockr terminal and how many status
-// lines it needs (2 when an agent runs: the second is the notes strip).
+// lines it needs (2 when an agent runs: the second is the notes strip). A
+// terminal with an i3 title bar needs none: its title is the header.
 func Header(w model.Window, now time.Time, home string, hints Hints) (h1, h2 string, lines int) {
+	if w.Titled {
+		return "", "", 0
+	}
 	t := ui.Tile(w)
 	name, auto := ui.Name(w)
 	var b strings.Builder

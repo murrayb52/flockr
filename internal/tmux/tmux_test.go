@@ -49,6 +49,21 @@ func TestHeaderPlainTerminal(t *testing.T) {
 	}
 }
 
+func TestTitledTerminalMovesHeaderIntoTitle(t *testing.T) {
+	a := &model.Agent{Kind: "claude", State: model.Working, Label: "api", Notes: []model.Note{{Done: true}, {}}}
+	w := model.Window{App: "term", Titled: true, Term: &model.Term{Cwd: "/x/app", Command: "claude", Agent: a}}
+	if _, _, lines := Header(w, time.Now(), "", Hints{}); lines != 0 {
+		t.Errorf("lines = %d, want 0", lines)
+	}
+	if got := Title(w, "/x", Hints{Label: "Alt+/", Notes: "Alt+."}); got != "● api  ·  Claude Code ~/app  ·  working  ·  notes 1/2 (Alt+.)" {
+		t.Errorf("title = %q", got)
+	}
+	w.Titled = false
+	if got := Title(w, "", Hints{}); got != "● api" {
+		t.Errorf("untitled title = %q", got)
+	}
+}
+
 func TestParsePanesKeepsFirstPanePerSession(t *testing.T) {
 	out := "a1\t%1\t/x\tzsh\t\t100\na1\t%2\t/y\tvim\t\t101\nb2\t%3\t/z\tclaude\tapi\t102\n"
 	got := parsePanes(out)

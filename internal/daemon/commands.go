@@ -185,8 +185,9 @@ func (d *Daemon) notes() protocol.Response {
 	if height > notesHeight {
 		height = notesHeight
 	}
+	header := map[string]int{"on": 1, "2": 2}[d.headers[s]["status"]]
 	go func() {
-		d.d.Mux.Popup(s, title, cmd, 2, height)
+		d.d.Mux.Popup(s, title, cmd, header, height)
 		d.mu.Lock()
 		delete(d.popups, s)
 		d.mu.Unlock()
