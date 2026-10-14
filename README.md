@@ -135,7 +135,9 @@ Extra tmux settings for flockr terminals go in `~/.config/flockr/tmux.conf`.
 
 ## Good to know
 
-- Inside flockr terminals, scrollback is tmux's (mouse wheel works); select text with `Shift`+drag.
+- Inside flockr terminals, scrollback is tmux's (mouse wheel works). Dragging selects in tmux and
+  copies to the clipboard on release (via `wl-copy`, `xclip` or `xsel`, whichever is installed);
+  `Shift`+drag uses your terminal's own selection instead.
 - Pi has no permission prompts: flockr treats a Pi dialog, or a turn that ends with a question, as
   "needs you".
 

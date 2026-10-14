@@ -24,6 +24,20 @@ func TestConfigNeverBindsKeys(t *testing.T) {
 	}
 }
 
+// Terminals that ignore OSC 52 (gnome-terminal) would otherwise leave mouse
+// selections in tmux's buffer only.
+func TestConfigPipesCopiesToClipboardTool(t *testing.T) {
+	if !strings.Contains(Config("/x"), "set -s copy-command '"+copyCommand+"'") {
+		t.Error("config lacks copy-command")
+	}
+	if strings.Contains(copyCommand, "'") {
+		t.Error("copyCommand must not contain single quotes")
+	}
+	if out, err := exec.Command("sh", "-n", "-c", copyCommand).CombinedOutput(); err != nil {
+		t.Errorf("copyCommand is not valid sh: %v: %s", err, out)
+	}
+}
+
 func TestHeaderIsTheNotesStrip(t *testing.T) {
 	w := model.Window{App: "term", Term: &model.Term{Cwd: "/x", Command: "claude",
 		Agent: &model.Agent{Kind: "claude", Notes: []model.Note{{Text: "a", Done: true}, {Text: "b"}}}}}
