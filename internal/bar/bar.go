@@ -12,6 +12,14 @@ import (
 
 type Style int
 
+// An urgent workspace flashes between a solid green block and green text,
+// swapping every flashFrames frames (frames tick every 250ms).
+const (
+	colFlash     = "#4ade80"
+	colFlashText = "#0d1f14"
+	flashFrames  = 2
+)
+
 const (
 	Polybar Style = iota
 	Plain
@@ -42,15 +50,22 @@ func Format(s model.Snapshot, style Style, frame int) string {
 			parts = append(parts, label)
 			continue
 		}
+		urgent := !w.Focused && (w.Urgent || ui.WorkspaceStatus(w) == model.StatusInput)
 		label = " " + escape(label) + " "
-		if glyph != "" {
+		switch {
+		case glyph == "":
+		case urgent: // the glyph takes the flash colour
+			label += glyph + " "
+		default:
 			label += "%{F" + colour + "}" + glyph + "%{F-} "
 		}
 		switch {
 		case w.Focused:
 			label = "%{B#262b33}%{u#40916c}%{+u}%{F" + ui.ColText + "}" + label + "%{F-}%{-u}%{B-}"
-		case w.Urgent || ui.WorkspaceStatus(w) == model.StatusInput:
-			label = "%{F#ff9a94}" + label + "%{F-}"
+		case urgent && frame/flashFrames%2 == 0:
+			label = "%{B" + colFlash + "}%{F" + colFlashText + "}" + label + "%{F-}%{B-}"
+		case urgent:
+			label = "%{F" + colFlash + "}" + label + "%{F-}"
 		default:
 			label = "%{F" + ui.ColDim + "}" + label + "%{F-}"
 		}

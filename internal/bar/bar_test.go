@@ -31,7 +31,7 @@ func TestPolybar(t *testing.T) {
 	got := Format(snap(), Polybar, 0)
 	for _, want := range []string{
 		"%{A1:i3-msg workspace number 1:}",
-		"%{F#ff9a94} 1 Bookshelf %{F#E53935}!%{F-}",
+		"%{B#4ade80}%{F#0d1f14} 1 Bookshelf ! %{F-}%{B-}",
 		"%{B#262b33}%{u#40916c}%{+u}%{F#f3f4f5} 4 %{F#f0b429}⠋%{F-}",
 		"%{F#52b788}✓%{F-}",
 	} {
@@ -41,6 +41,16 @@ func TestPolybar(t *testing.T) {
 	}
 	if strings.Count(got, "%{A1:") != strings.Count(got, "%{A}") {
 		t.Error("unbalanced click actions")
+	}
+}
+
+func TestPolybarUrgentFlashes(t *testing.T) {
+	on, off := Format(snap(), Polybar, 0), Format(snap(), Polybar, 2)
+	if want := "%{B#4ade80}%{F#0d1f14} 1 Bookshelf ! %{F-}%{B-}"; !strings.Contains(on, want) {
+		t.Errorf("flash on: missing %q in\n%s", want, on)
+	}
+	if want := "%{F#4ade80} 1 Bookshelf ! %{F-}"; !strings.Contains(off, want) {
+		t.Errorf("flash off: missing %q in\n%s", want, off)
 	}
 }
 
